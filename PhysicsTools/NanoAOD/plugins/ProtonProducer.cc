@@ -30,6 +30,8 @@
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Utilities/interface/StreamID.h"
 
+#include "CommonTools/Egamma/interface/EffectiveAreas.h"
+
 #include "DataFormats/NanoAOD/interface/FlatTable.h"
 #include "DataFormats/Common/interface/ValueMap.h"
 
@@ -58,15 +60,11 @@ public:
   // ------------ method called to produce the data  ------------
   void produce(edm::StreamID id, edm::Event &iEvent, const edm::EventSetup &iSetup) const override {
     // Get Forward Proton handle
-    edm::Handle<reco::ForwardProtonCollection> hRecoProtonsMultiRP;
-    iEvent.getByToken(tokenRecoProtonsMultiRP_, hRecoProtonsMultiRP);
-
-    edm::Handle<reco::ForwardProtonCollection> hRecoProtonsSingleRP;
-    iEvent.getByToken(tokenRecoProtonsSingleRP_, hRecoProtonsSingleRP);
+    auto hRecoProtonsMultiRP = iEvent.getHandle(tokenRecoProtonsMultiRP_);
+    auto hRecoProtonsSingleRP = iEvent.getHandle(tokenRecoProtonsSingleRP_);
 
     // Get PPS Local Track handle
-    edm::Handle<std::vector<CTPPSLocalTrackLite>> ppsTracksLite;
-    iEvent.getByToken(tokenTracksLite_, ppsTracksLite);
+    auto ppsTracksLite = iEvent.getHandle(tokenTracksLite_);
 
     // book output variables for protons
     std::vector<int> multiRP_arm;
@@ -83,7 +81,7 @@ public:
         singleRP_protonRPId.reserve(num_proton);
 
         for (const auto &proton : *hRecoProtonsSingleRP) {
-          CTPPSDetId rpId((*proton.contributingLocalTracks().begin())->getRPId());
+          CTPPSDetId rpId((*proton.contributingLocalTracks().begin())->rpId());
           unsigned int rpDecId = rpId.arm() * 100 + rpId.station() * 10 + rpId.rp();
           singleRP_protonRPId.push_back(rpDecId);
         }
@@ -105,7 +103,7 @@ public:
 
         bool found = false;
 
-        CTPPSDetId rpId(tr.getRPId());
+        CTPPSDetId rpId(tr.rpId());
         unsigned int rpDecId = rpId.arm() * 100 + rpId.station() * 10 + rpId.rp();
 
         signed int singleRP_idx = -1;
@@ -137,10 +135,10 @@ public:
           multiRPProtonIdx.push_back(multiRP_idx);
           decRPId.push_back(rpDecId);
           rpType.push_back(rpId.subdetId());
-          trackX.push_back(tr.getX());
-          trackY.push_back(tr.getY());
-          trackTime.push_back(tr.getTime());
-          trackTimeUnc.push_back(tr.getTimeUnc());
+          trackX.push_back(tr.x());
+          trackY.push_back(tr.y());
+          trackTime.push_back(tr.time());
+          trackTimeUnc.push_back(tr.timeUnc());
         }
       }
     }
@@ -152,14 +150,14 @@ public:
 
         for (const auto &ref : proton.contributingLocalTracks()) {
           multiRPProtonIdx.push_back(p_idx);
-          CTPPSDetId rpId(ref->getRPId());
+          CTPPSDetId rpId(ref->rpId());
           unsigned int rpDecId = rpId.arm() * 100 + rpId.station() * 10 + rpId.rp();
           decRPId.push_back(rpDecId);
           rpType.push_back(rpId.subdetId());
-          trackX.push_back(ref->getX());
-          trackY.push_back(ref->getY());
-          trackTime.push_back(ref->getTime());
-          trackTimeUnc.push_back(ref->getTimeUnc());
+          trackX.push_back(ref->x());
+          trackY.push_back(ref->y());
+          trackTime.push_back(ref->time());
+          trackTimeUnc.push_back(ref->timeUnc());
         }
       }
     }
@@ -179,15 +177,15 @@ public:
 
     // build track table
     auto ppsTab = std::make_unique<nanoaod::FlatTable>(trackX.size(), "PPSLocalTrack", false);
-    ppsTab->addColumn<int>("multiRPProtonIdx", multiRPProtonIdx, "local track - proton correspondence", nanoaod::FlatTable::IntColumn);
+    ppsTab->addColumn<int>("multiRPProtonIdx", multiRPProtonIdx, "local track - proton correspondence");
     if (storeSingleRPProtons_)
-      ppsTab->addColumn<int>("singleRPProtonIdx", singleRPProtonIdx, "local track - proton correspondence", nanoaod::FlatTable::IntColumn);
-    ppsTab->addColumn<float>("x", trackX, "local track x", nanoaod::FlatTable::FloatColumn, 16);
-    ppsTab->addColumn<float>("y", trackY, "local track y", nanoaod::FlatTable::FloatColumn, 13);
-    ppsTab->addColumn<float>("time", trackTime, "local track time", nanoaod::FlatTable::FloatColumn, 16);
-    ppsTab->addColumn<float>("timeUnc", trackTimeUnc, "local track time uncertainty", nanoaod::FlatTable::FloatColumn, 13);
-    ppsTab->addColumn<int>("decRPId", decRPId, "local track detector dec id", nanoaod::FlatTable::IntColumn);
-    ppsTab->addColumn<int>("rpType", rpType, "strip=3, pixel=4, diamond=5, timing=6", nanoaod::FlatTable::IntColumn);
+      ppsTab->addColumn<int>("singleRPProtonIdx", singleRPProtonIdx, "local track - proton correspondence");
+    ppsTab->addColumn<float>("x", trackX, "local track x", 16);
+    ppsTab->addColumn<float>("y", trackY, "local track y", 13);
+    ppsTab->addColumn<float>("time", trackTime, "local track time", 16);
+    ppsTab->addColumn<float>("timeUnc", trackTimeUnc, "local track time uncertainty", 13);
+    ppsTab->addColumn<int>("decRPId", decRPId, "local track detector dec id");
+    ppsTab->addColumn<int>("rpType", rpType, "strip=3, pixel=4, diamond=5, timing=6");
     ppsTab->setDoc("ppsLocalTrack variables");
 
     // save output
