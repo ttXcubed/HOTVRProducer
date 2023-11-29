@@ -4,7 +4,7 @@ from PhysicsTools.NanoAOD.nano_eras_cff import *
 from PhysicsTools.NanoAOD.common_cff import *
 from PhysicsTools.NanoAOD.simpleCandidateFlatTableProducer_cfi import simpleCandidateFlatTableProducer
 
-from RecoJets.JetProducers.hotvrJets_cfi import hotvrPFJets
+from RecoJets.JetProducers.hotvrJets_cfi import *
 
 hotvrJetTable = simpleCandidateFlatTableProducer.clone(
     src = cms.InputTag("hotvrPFJets"),
@@ -62,7 +62,7 @@ hotvrJetTable.variables.pt.precision=10
 # hotvrSubJetTable.variables.pt.precision=10
 
 # jetHOTVRUserDataTask = cms.Task(tightJetIdHOTVR,tightJetIdLepVetoHOTVR)
-jetHOTVRTask = cms.Task(hotvrPFJets)
+jetHOTVRTask = cms.Task(packedpuppi,hotvrPFJets)
 
 #after lepton collections have been run
 # jetHOTVRLepTask = cms.Task(lepInHOTVRJetVars)

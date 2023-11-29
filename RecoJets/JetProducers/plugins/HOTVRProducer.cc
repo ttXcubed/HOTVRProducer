@@ -53,6 +53,7 @@
 using namespace fastjet;
 using namespace contrib;
 using namespace std;
+using namespace edm;
 
 //
 // class declaration
@@ -69,17 +70,24 @@ class HOTVRProducer : public edm::stream::EDProducer<> {
     static pat::Jet rekeyJet(const pat::Jet & jet, edm::Handle<edm::View<reco::Candidate>> & candHandle);
 
   private:
-  virtual void produce(edm::Event&, const edm::EventSetup&) override;
-  virtual pat::Jet createPatJet(const PseudoJet &) const;
-  virtual pat::Jet createPatJet(const fastjet::PseudoJet &, const edm::EventSetup&);
-    // ----------member data ---------------------------
-  edm::EDGetToken src_token_;
-  const std::string subjetCollName_;
-  reco::Particle::Point  vertex_;
-  std::vector<edm::Ptr<reco::Candidate> > particles_;
-  edm::EDGetTokenT<reco::VertexCollection> input_vertex_token_;
-  bool doRekey_;
-  edm::EDGetTokenT<edm::View<reco::Candidate>> rekeyCandSrcToken_;
+    virtual void produce(edm::Event&, const edm::EventSetup&) override;
+    virtual pat::Jet createPatJet(const PseudoJet &) const;
+    virtual pat::Jet createPatJet(const fastjet::PseudoJet &, const edm::EventSetup&);
+      // ----------member data ---------------------------
+    edm::EDGetToken src_token_;
+    edm::InputTag src_;
+    const std::string subjetCollName_;
+    reco::Particle::Point  vertex_;
+    std::vector<edm::Ptr<reco::Candidate> > particles_;
+    bool doRekey_;
+    edm::EDGetTokenT<edm::View<reco::Candidate>> rekeyCandSrcToken_;
+  
+  //following https://github.com/cms-sw/cmssw/blob/master/RecoJets/JetProducers/plugins/VirtualJetProducer.h
+  protected:
+    bool applyWeight_;
+    edm::EDGetTokenT<reco::VertexCollection> input_vertex_token_;
+    edm::EDGetTokenT<edm::ValueMap<float>> input_weights_token_;
+    edm::ValueMap<float> weights_;  // weights per particle (e.g. from PUPPI)
 };
 
 //
@@ -90,10 +98,20 @@ HOTVRProducer::HOTVRProducer(const edm::ParameterSet& iConfig):
   subjetCollName_("SubJets"),
   doRekey_(iConfig.exists("doRekey") ? iConfig.getParameter<bool>("doRekey") : false)
 {
+  src_ = iConfig.getParameter<edm::InputTag>("src"),
   // We make both the fat jets and subjets, and we must store them as separate collections
   produces<pat::JetCollection>();
   produces<pat::JetCollection>(subjetCollName_);
   input_vertex_token_ = consumes<reco::VertexCollection>(edm::InputTag("offlineSlimmedPrimaryVertices"));
+  applyWeight_ = iConfig.getParameter<bool>("applyWeight");
+  if (applyWeight_) {
+    edm::InputTag srcWeights = iConfig.getParameter<edm::InputTag>("srcWeights");
+    if (srcWeights.label() == src_.label())
+      LogWarning("HOTVRProducer")
+          << "Particle and weights collection have the same label. You may be applying the same weights twice.\n";
+    if (!srcWeights.label().empty())
+      input_weights_token_ = consumes<edm::ValueMap<float>>(srcWeights);
+  }
   if (doRekey_) {
     // Add option to rekey fatjets & their subjets, i.e. make their duaghters point to the equivalent
     // particle in another collection (the one specified by rekeyCandidateSrc)
@@ -144,6 +162,10 @@ void HOTVRProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
   if (!pvCollection->empty()) vertex_=pvCollection->begin()->position();
   else vertex_ = reco::Particle::Point(0,0,0);
 
+  // Get Weights Collection
+  if ((applyWeight_) && (!input_weights_token_.isUninitialized()))
+    weights_ = iEvent.get(input_weights_token_);
+
   edm::Handle<edm::View<reco::Candidate>> rekeyCandHandle;
   if (doRekey_) {
     iEvent.getByToken(rekeyCandSrcToken_, rekeyCandHandle);
@@ -168,9 +190,27 @@ void HOTVRProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
         (cand.pt() == 0))
       continue;
 
-    //    _psj.push_back(PseudoJet(cand.px(), cand.py(), cand.pz(), cand.energy()));
-    PseudoJet tmp_particle = PseudoJet(cand.px(), cand.py(), cand.pz(), cand.energy());
-    tmp_particle.set_user_index(i);//important: store index for later linking between clustered jet and constituence
+    float px = cand.px();
+    float py = cand.py();
+    float pz = cand.pz();
+    float energy = cand.energy();
+
+    if (applyWeight_) {
+        if (input_weights_token_.isUninitialized())
+            throw cms::Exception("InvalidInput")
+                << "applyWeight set to True, but no weights given in HOTVRProducer\n";
+        auto ref = particles->refAt(i_gl); // Get the reference to the particle
+        float w = weights_[ref];  // Use the reference as the key to access the weight 
+        if (w > 0) {
+            px *= w;
+            py *= w;
+            pz *= w;
+            energy *= w;
+        }
+    }
+
+    PseudoJet tmp_particle = PseudoJet(px, py, pz, energy);
+    tmp_particle.set_user_index(i); // Store index for later linking
     _psj.push_back(tmp_particle);
     particles_.push_back(particles->ptrAt(i_gl));
     i++;
