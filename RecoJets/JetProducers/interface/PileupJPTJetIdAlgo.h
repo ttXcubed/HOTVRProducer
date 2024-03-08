@@ -7,41 +7,44 @@
 #include <string>
 #include <memory>
 #include <map>
-#include <fstream>
-#include <iomanip>
-#include <iostream>
-#include <vector>
+#include<fstream>
+#include<iomanip>
+#include<iostream>
+#include<vector>
 
 namespace edm {
   class Event;
   class EventSetup;
   class ParameterSet;
-}  // namespace edm
+}
 // For MVA analysis
 
 #include "TMVA/Tools.h"
 #include "TMVA/Reader.h"
 
-namespace cms {
+namespace cms
+{
 
-  class PileupJPTJetIdAlgo {
-  public:
-    PileupJPTJetIdAlgo(const edm::ParameterSet& fParameters);
+class PileupJPTJetIdAlgo
+{
+public:  
 
-    virtual ~PileupJPTJetIdAlgo();
+  PileupJPTJetIdAlgo(const edm::ParameterSet& fParameters);
 
-    void bookMVAReader();
+  virtual ~PileupJPTJetIdAlgo();
 
-    float fillJPTBlock(const reco::JPTJet* jet);
+  void bookMVAReader(); 
 
-  private:
-    int verbosity;
-    // Variables for multivariate analysis
+  float fillJPTBlock(const reco::JPTJet* jet 
+                  );
+private:
+     int verbosity;
+// Variables for multivariate analysis
 
-    float Nvtx, PtJ, EtaJ, Beta, MultCalo, dAxis1c, dAxis2c, MultTr, dAxis1t, dAxis2t;
-    TMVA::Reader* reader_;
-    TMVA::Reader* readerF_;
-    std::string tmvaWeights_, tmvaWeightsF_, tmvaMethod_;
-  };
-}  // namespace cms
+     float Nvtx,PtJ,EtaJ,Beta,MultCalo,dAxis1c,dAxis2c,MultTr,dAxis1t,dAxis2t;
+     TMVA::Reader * reader_; 
+     TMVA::Reader * readerF_;
+     std::string    tmvaWeights_, tmvaWeightsF_, tmvaMethod_;
+};
+}
 #endif

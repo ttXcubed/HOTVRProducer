@@ -1,6 +1,9 @@
+from Configuration.Eras.Modifier_run2_miniAOD_80XLegacy_cff import run2_miniAOD_80XLegacy
+
+
 import FWCore.ParameterSet.Config as cms
 from PhysicsTools.NanoAOD.common_cff import *
-from PhysicsTools.NanoAOD.globalVariablesTableProducer_cfi import globalVariablesTableProducer
+
 
 ##################### User floats producers, selectors ##########################
 
@@ -19,7 +22,7 @@ matchGenCHadron = matchGenCHadron.clone(
 )
 
 ## Producer for ttbar categorisation ID
-from TopQuarkAnalysis.TopTools.categorizeGenTtbar_cfi import categorizeGenTtbar
+from TopQuarkAnalysis.TopTools.GenTtbarCategorizer_cfi import categorizeGenTtbar
 categorizeGenTtbar = categorizeGenTtbar.clone(
     genJetPtMin = 20.,
     genJetAbsEtaMax = 2.4,
@@ -27,12 +30,17 @@ categorizeGenTtbar = categorizeGenTtbar.clone(
 )
 
 
+### Era dependent customization
+run2_miniAOD_80XLegacy.toModify( matchGenBHadron, jetFlavourInfos = cms.InputTag("genJetFlavourAssociation"),)
+
+run2_miniAOD_80XLegacy.toModify( matchGenCHadron, jetFlavourInfos = cms.InputTag("genJetFlavourAssociation"),)
+
+
 ##################### Tables for final output and docs ##########################
-ttbarCategoryTable = globalVariablesTableProducer.clone(
-    variables = cms.PSet(
-        genTtbarId = ExtVar( cms.InputTag("categorizeGenTtbar:genTtbarId"), "int", doc = "ttbar categorization")
-    )
+ttbarCategoryTable = cms.EDProducer("GlobalVariablesTableProducer",
+                                    variables = cms.PSet(
+                                        genTtbarId = ExtVar( cms.InputTag("categorizeGenTtbar:genTtbarId"), "int", doc = "ttbar categorization")
+                                    )
 )
 
-ttbarCategoryTableTask = cms.Task(ttbarCategoryTable)
-ttbarCatMCProducersTask = cms.Task(matchGenBHadron,matchGenCHadron,categorizeGenTtbar)
+ttbarCatMCProducers = cms.Sequence(matchGenBHadron + matchGenCHadron + categorizeGenTtbar)

@@ -1,5 +1,5 @@
-import CRABClient
-from WMCore.Configuration import Configuration
+from CRABClient.UserUtilities import config, getLumiListInValidFiles
+# from WMCore.DataStructs.LumiList import LumiList
 import sys,os
 import copy
 import argparse
@@ -7,24 +7,16 @@ import yaml
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument('--isData', action='store_true', help='True when submitting data samples')
 parser.add_argument('--recoveryTask', action='store_true', help='True when recoveryTask mode is ON')
 parser.add_argument('--year', dest='year', type=str, help='Year')
 args = parser.parse_args()
 
-
-if args.isData:
-    goldenJSON_file = ''
-    if args.year == '2022' or args.year == '2022_EE': 
-        goldenJSON_dir = '{}/crab_mini_to_nano/goldenJSON_files/2022'.format(os.getcwd())
-    for goldenJSON_path in os.listdir(goldenJSON_dir):
-        if os.path.isfile(os.path.join(goldenJSON_dir, goldenJSON_path)):
-            # add filename to list
-            goldenJSON_file = goldenJSON_dir + '/' + goldenJSON_path
+MASS_VALUES = [500, 750]#, 1000, 1250, 1500, 1750, 2000, 2500, 3000, 4000]
+WIDTH_VALUES = [4]#, 10, 20, 50]
 
 # requestName = "nanoaodUL"+args.year+"v1_230202"
 # requestName = "testNANO18_2"
-requestName = "nanoaod_hotvr_UL"+args.year+"v1_230112"
+requestName = "nanoaod_hotvr_UL"+args.year+"v1_230510"
 
 yaml_file_dict = {}
 with open('{}/crab_mini_to_nano/input_files.yaml'.format(os.getcwd())) as yaml_f:
@@ -33,26 +25,29 @@ with open('{}/crab_mini_to_nano/input_files.yaml'.format(os.getcwd())) as yaml_f
     except yaml.YAMLError as exc:
         print(exc)
 
-yaml_key = 'bkg'
-if args.isData: yaml_key = 'data'
+YAML_KEY = 'sgn'
+PROCESS_TAG = yaml_file_dict[YAML_KEY][args.year].keys()[0]
+PROCESS = yaml_file_dict[YAML_KEY][args.year][PROCESS_TAG]
+print(PROCESS, PROCESS_TAG)
 
-data_tags = yaml_file_dict[yaml_key][args.year].keys()
-datasets = []
-for data_tag in yaml_file_dict[yaml_key][args.year].keys():
-    datasets.append(yaml_file_dict[yaml_key][args.year][data_tag])
 
-print(data_tags)
-print(datasets)
+data_tags, datasets = [], []
+for mass in MASS_VALUES:
+    for width in WIDTH_VALUES:
+        process_tag = PROCESS_TAG.replace("MASS", str(mass)).replace("WIDTH", str(width))
+        process = PROCESS.replace("MASS", str(mass)).replace("WIDTH", str(width))
+        data_tags.append(process_tag)
+        datasets.append(process)
+
 
 myInputFiles = dict()
 for data_tag, dataset in zip(data_tags, datasets):
+
     myInputFiles[data_tag] = [lambda cfg: setattr(cfg.Data,'inputDataset', dataset)]
-print(myInputFiles)
+
 
 userName = 'gmilella' #getUsernameFromSiteDB() 
-# configTmpl = config()
-configTmpl = Configuration()
-
+configTmpl = config()
 # ----
 configTmpl.section_('General')
 configTmpl.General.transferOutputs = True
@@ -63,26 +58,22 @@ configTmpl.General.transferLogs = False
 configTmpl.section_('JobType')
 configTmpl.JobType.psetName = None
 configTmpl.JobType.pluginName = 'Analysis'
-if args.isData: 
-    configTmpl.JobType.psetName = '{}/mini_to_nano_producer/MiniToNano_producer_data_{}.py'.format(os.getcwd(), args.year) 
-else:
-    configTmpl.JobType.psetName = '{}/mini_to_nano_producer/MiniToNano_producer_{}.py'.format(os.getcwd(), args.year)
+configTmpl.JobType.psetName = '{}/mini_to_nano_producer/MiniToNano_producer_{}.py'.format(os.getcwd(), args.year)
 configTmpl.JobType.outputFiles = []
 configTmpl.JobType.allowUndistributedCMSSW = True
-# configTmpl.JobType.maxJobRuntimeMin= 27*60
-# configTmpl.JobType.maxMemoryMB = 2500
+# configTmpl.JobType.maxJobRuntimeMin= 25*60
+configTmpl.JobType.maxMemoryMB = 2500
 # ----
 
 # ----
 configTmpl.section_('Data')
-if args.isData:
-    configTmpl.Data.inputDBS = 'global'
-    configTmpl.Data.splitting = 'LumiBased'
-    configTmpl.Data.unitsPerJob = 10
-else:
-    configTmpl.Data.inputDBS = 'global'
-    configTmpl.Data.splitting = 'FileBased'
-    configTmpl.Data.unitsPerJob = 4
+# N.B this part must be active in case of PRIVATE MC!
+# configTmpl.Data.inputDBS = 'phys03'
+# configTmpl.Data.splitting = 'FileBased'
+# configTmpl.Data.unitsPerJob = 1
+configTmpl.Data.inputDBS = 'global'
+configTmpl.Data.splitting = 'Automatic'
+configTmpl.Data.unitsPerJob = 180
 
 # configTmpl.Data.totalUnits = 1  # ACTIVE WHEN TESTING 
 configTmpl.Data.publication = True
@@ -98,14 +89,14 @@ if __name__ == '__main__':
 
     from CRABAPI.RawCommand import crabCommand
     from CRABClient.ClientExceptions import ClientException
-    # from httplib import HTTPException
+    from httplib import HTTPException
     from multiprocessing import Process
 
     def submit(config):
         try:
             crabCommand('submit',  config = config)
-        # except HTTPException as hte:
-        #     print("Failed submitting task: %s" % (hte.headers))
+        except HTTPException as hte:
+            print("Failed submitting task: %s" % (hte.headers))
         except ClientException as cle:
             print("Failed submitting task: %s" % (cle))
 
@@ -116,18 +107,13 @@ if __name__ == '__main__':
         myJob = myInputFiles[jobName]
         i=i+1
         config = copy.deepcopy(configTmpl)
+
+        
         config.General.requestName = jobName+"_"+requestName
         config.General.workArea = "crab/"+requestName+"/"+jobName
-        if args.isData: config.Data.outputDatasetTag = requestName+"_era_"+jobName.split('_')[-1]
-        else: config.Data.outputDatasetTag = requestName
-        
-        if args.isData:
-            config.Data.outLFNDirBase = "/store/user/"+userName+"/data_"+args.year+"/"+requestName
-            config.Data.lumiMask = goldenJSON_file
-            # if jobName[-1] == "E": 
-            #     config.JobType.psetName = '{}/mini_to_nano_producer/MiniToNano_producer_data_E_{}.py'.format(os.getcwd(), args.year) 
-        else: 
-            config.Data.outLFNDirBase = "/store/user/"+userName+"/bkg_"+args.year+"/"+requestName
+        config.Data.outLFNDirBase = "/store/user/"+userName+"/sgn_"+args.year+"/"+requestName
+        # config.Data.outputPrimaryDataset = jobName
+        config.Data.outputDatasetTag = requestName
 
         print('outLFNDirBase {}'.format(config.Data.outLFNDirBase))
         for mod in myJob:
@@ -145,7 +131,6 @@ if __name__ == '__main__':
         print(config)
             
         print("Submitting job ",i," of ",len(myInputFiles.keys()),":",config.General.workArea)
-        
         
         p = Process(target=submit, args=(config,))
         p.start()

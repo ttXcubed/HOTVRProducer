@@ -1,6 +1,5 @@
 import FWCore.ParameterSet.Config as cms
 from PhysicsTools.NanoAOD.common_cff import *
-from PhysicsTools.NanoAOD.globalVariablesTableProducer_cfi import globalVariablesTableProducer
 
 # Bad/clone muon filters - tagging mode to keep the event
 from RecoMET.METFilters.badGlobalMuonTaggersMiniAOD_cff import badGlobalMuonTaggerMAOD, cloneGlobalMuonTaggerMAOD
@@ -29,7 +28,7 @@ BadChargedCandidateTagger = BadChargedCandidateFilter.clone(
     taggingMode = True,
 )
 
-extraFlagsTable = globalVariablesTableProducer.clone(
+extraFlagsTable = cms.EDProducer("GlobalVariablesTableProducer",
     variables = cms.PSet(
         Flag_BadGlobalMuon = ExtVar(cms.InputTag("badGlobalMuonTagger:notBadEvent"), bool, doc = "Bad muon flag"),
         Flag_CloneGlobalMuon = ExtVar(cms.InputTag("cloneGlobalMuonTagger:notBadEvent"), bool, doc = "Clone muon flag"),
@@ -38,12 +37,11 @@ extraFlagsTable = globalVariablesTableProducer.clone(
     )
 )
 
+extraFlagsProducers = cms.Sequence(badGlobalMuonTagger + cloneGlobalMuonTagger + BadPFMuonTagger + BadChargedCandidateTagger)
+
 from RecoMET.METFilters.ecalBadCalibFilter_cfi import *
 ecalBadCalibFilterNanoTagger = ecalBadCalibFilter.clone(
     taggingMode = cms.bool(True)
 )
 
-
-# empty task as default
-extraFlagsProducersTask = cms.Task()
-extraFlagsTableTask = cms.Task()
+extraFlagsProducers102x = cms.Sequence(ecalBadCalibFilterNanoTagger)

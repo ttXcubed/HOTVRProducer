@@ -27,8 +27,9 @@ public:
   void produce(edm::StreamID id, edm::Event& iEvent, const edm::EventSetup& iSetup) const override {
     auto npuTab = std::make_unique<nanoaod::FlatTable>(1, "Pileup", true);
 
-    const auto& pvProd = iEvent.get(pvTag_);
-    const double refpvz = pvProd.at(0).position().z();
+    edm::Handle<std::vector<reco::Vertex>> pvsIn;
+    iEvent.getByToken(pvTag_, pvsIn);
+    const double refpvz = (*pvsIn)[0].position().z();
 
     edm::Handle<std::vector<PileupSummaryInfo>> npuInfo;
     if (iEvent.getByToken(npuTag_, npuInfo)) {
@@ -41,13 +42,12 @@ public:
   void fillNPUObjectTable(const std::vector<PileupSummaryInfo>& npuProd, nanoaod::FlatTable& out, double refpvz) const {
     // Get BX 0
     unsigned int bx0 = 0;
-    float nt = 0;
+    unsigned int nt = 0;
     unsigned int npu = 0;
 
     auto zbin = std::lower_bound(vz_.begin(), vz_.end() - 1, std::abs(refpvz));
     float pudensity = 0;
     float gpudensity = 0;
-
     float pthatmax = 0;
 
     for (unsigned int ibx = 0; ibx < npuProd.size(); ibx++) {
@@ -67,7 +67,6 @@ public:
             gpudensity++;
         }
         gpudensity /= (20.0 * (*(zbin) - *(zbin - 1)));
-
         if (savePtHatMax_) {
           if (!npuProd[ibx].getPU_pT_hats().empty()) {
             pthatmax = *max_element(npuProd[ibx].getPU_pT_hats().begin(), npuProd[ibx].getPU_pT_hats().end());
@@ -87,17 +86,19 @@ public:
                               nt,
                               "the true mean number of the poisson distribution for this event from which the number "
                               "of interactions each bunch crossing has been sampled",
-                              10);
+                              nanoaod::FlatTable::FloatColumn);
     out.addColumnValue<int>(
         "nPU",
         npu,
-        "the number of pileup interactions that have been added to the event in the current bunch crossing");
-    out.addColumnValue<int>("sumEOOT", eoot, "number of early out of time pileup");
-    out.addColumnValue<int>("sumLOOT", loot, "number of late out of time pileup");
-    out.addColumnValue<float>("pudensity", pudensity, "PU vertices / mm");
-    out.addColumnValue<float>("gpudensity", gpudensity, "Generator-level PU vertices / mm");
+        "the number of pileup interactions that have been added to the event in the current bunch crossing",
+        nanoaod::FlatTable::IntColumn);
+    out.addColumnValue<int>("sumEOOT", eoot, "number of early out of time pileup", nanoaod::FlatTable::IntColumn);
+    out.addColumnValue<int>("sumLOOT", loot, "number of late out of time pileup", nanoaod::FlatTable::IntColumn);
+    out.addColumnValue<float>("pudensity", pudensity, "PU vertices / mm", nanoaod::FlatTable::FloatColumn);
+    out.addColumnValue<float>(
+        "gpudensity", gpudensity, "Generator-level PU vertices / mm", nanoaod::FlatTable::FloatColumn);
     if (savePtHatMax_) {
-      out.addColumnValue<float>("pthatmax", pthatmax, "Maximum pt-hat");
+      out.addColumnValue<float>("pthatmax", pthatmax, "Maximum pt-hat", nanoaod::FlatTable::FloatColumn);
     }
   }
 
