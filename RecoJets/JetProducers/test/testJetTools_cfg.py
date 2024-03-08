@@ -98,6 +98,7 @@ patJetsAK4.userData.userFloats.src += ['hfJetShowerShape:sigmaEtaEta','hfJetShow
 patJetsAK4.userData.userInts.src += ['hfJetShowerShape:centralEtaStripSize','hfJetShowerShape:adjacentEtaStripsSize']
 process.out.outputCommands += ['keep *_hfJetShowerShape_*_*']
 
+
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 #Njettiness
 

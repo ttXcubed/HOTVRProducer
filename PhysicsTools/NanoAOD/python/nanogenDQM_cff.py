@@ -21,7 +21,8 @@ nanogenDQM = DQMEDAnalyzer("NanoAODDQM",
     )
 )
 
-nanoDQMQTester = cms.EDAnalyzer("QualityTester",
+from DQMServices.Core.DQMQualityTester import DQMQualityTester
+nanoDQMQTester = DQMQualityTester(
     qtList = cms.untracked.FileInPath('PhysicsTools/NanoAOD/test/dqmQualityTests.xml'),
     prescaleFactor = cms.untracked.int32(1),                               
     testInEventloop = cms.untracked.bool(False),
