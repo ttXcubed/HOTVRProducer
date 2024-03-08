@@ -301,7 +301,7 @@ public:
     // table for gen info, always available
     auto out = std::make_unique<nanoaod::FlatTable>(1, "genWeight", true);
     out->setDoc("generator weight");
-    out->addColumnValue<float>("", weight, "generator weight", nanoaod::FlatTable::FloatColumn);
+    out->addColumnValue<float>("", weight, "generator weight");
     iEvent.put(std::move(out));
 
     std::string model_label = streamCache(id)->countermap.getLabel();
@@ -344,8 +344,8 @@ public:
       fillLHEPdfWeightTablesFromGenInfo(
           counter, genWeightChoice, weight, *genInfo, lheScaleTab, lhePdfTab, lheNamedTab, genPSTab);
       lheRwgtTab = std::make_unique<nanoaod::FlatTable>(1, "LHEReweightingWeights", true);
-      //lheNamedTab = std::make_unique<nanoaod::FlatTable>(1, "LHENamedWeights", true);
-      //genPSTab = std::make_unique<nanoaod::FlatTable>(1, "PSWeight", true);
+      //lheNamedTab.reset(new nanoaod::FlatTable(1, "LHENamedWeights", true));
+      //genPSTab.reset(new nanoaod::FlatTable(1, "PSWeight", true));
     } else {
       // Still try to add the PS weights
       fillOnlyPSWeightTable(counter, genWeightChoice, weight, *genInfo, genPSTab);
@@ -414,30 +414,23 @@ public:
     setPSWeightInfo(genProd.weights(), genWeightChoice, wPS, psWeightDocStr);
 
     outPS = std::make_unique<nanoaod::FlatTable>(wPS.size(), "PSWeight", false);
-    outPS->addColumn<float>("", wPS, psWeightDocStr, nanoaod::FlatTable::FloatColumn, lheWeightPrecision_);
+    outPS->addColumn<float>("", wPS, psWeightDocStr, lheWeightPrecision_);
 
     outScale = std::make_unique<nanoaod::FlatTable>(wScale.size(), "LHEScaleWeight", false);
-    outScale->addColumn<float>(
-        "", wScale, weightChoice->scaleWeightsDoc, nanoaod::FlatTable::FloatColumn, lheWeightPrecision_);
+    outScale->addColumn<float>("", wScale, weightChoice->scaleWeightsDoc, lheWeightPrecision_);
 
     outPdf = std::make_unique<nanoaod::FlatTable>(wPDF.size(), "LHEPdfWeight", false);
-    outPdf->addColumn<float>(
-        "", wPDF, weightChoice->pdfWeightsDoc, nanoaod::FlatTable::FloatColumn, lheWeightPrecision_);
+    outPdf->addColumn<float>("", wPDF, weightChoice->pdfWeightsDoc, lheWeightPrecision_);
 
     outRwgt = std::make_unique<nanoaod::FlatTable>(wRwgt.size(), "LHEReweightingWeight", false);
-    outRwgt->addColumn<float>(
-        "", wRwgt, weightChoice->rwgtWeightDoc, nanoaod::FlatTable::FloatColumn, lheWeightPrecision_);
+    outRwgt->addColumn<float>("", wRwgt, weightChoice->rwgtWeightDoc, lheWeightPrecision_);
 
     outNamed = std::make_unique<nanoaod::FlatTable>(1, "LHEWeight", true);
-    outNamed->addColumnValue<float>("originalXWGTUP",
-                                    lheProd.originalXWGTUP(),
-                                    "Nominal event weight in the LHE file",
-                                    nanoaod::FlatTable::FloatColumn);
+    outNamed->addColumnValue<float>("originalXWGTUP", lheProd.originalXWGTUP(), "Nominal event weight in the LHE file");
     for (unsigned int i = 0, n = wNamed.size(); i < n; ++i) {
       outNamed->addColumnValue<float>(namedWeightLabels_[i],
                                       wNamed[i],
                                       "LHE weight for id " + namedWeightIDs_[i] + ", relative to nominal",
-                                      nanoaod::FlatTable::FloatColumn,
                                       lheWeightPrecision_);
     }
 
@@ -470,22 +463,18 @@ public:
     setPSWeightInfo(genProd.weights(), weightChoice, wPS, psWeightsDocStr);
 
     outScale = std::make_unique<nanoaod::FlatTable>(wScale.size(), "LHEScaleWeight", false);
-    outScale->addColumn<float>(
-        "", wScale, weightChoice->scaleWeightsDoc, nanoaod::FlatTable::FloatColumn, lheWeightPrecision_);
+    outScale->addColumn<float>("", wScale, weightChoice->scaleWeightsDoc, lheWeightPrecision_);
 
     outPdf = std::make_unique<nanoaod::FlatTable>(wPDF.size(), "LHEPdfWeight", false);
-    outPdf->addColumn<float>(
-        "", wPDF, weightChoice->pdfWeightsDoc, nanoaod::FlatTable::FloatColumn, lheWeightPrecision_);
+    outPdf->addColumn<float>("", wPDF, weightChoice->pdfWeightsDoc, lheWeightPrecision_);
 
     outPS = std::make_unique<nanoaod::FlatTable>(wPS.size(), "PSWeight", false);
-    outPS->addColumn<float>("", wPS, psWeightsDocStr, nanoaod::FlatTable::FloatColumn,
-                                    lheWeightPrecision_);
+    outPS->addColumn<float>("", wPS, psWeightsDocStr, lheWeightPrecision_);
 
     outNamed = std::make_unique<nanoaod::FlatTable>(1, "LHEWeight", true);
-    outNamed->addColumnValue<float>(
-        "originalXWGTUP", originalXWGTUP, "Nominal event weight in the LHE file", nanoaod::FlatTable::FloatColumn);
+    outNamed->addColumnValue<float>("originalXWGTUP", originalXWGTUP, "Nominal event weight in the LHE file");
     /*for (unsigned int i = 0, n = wNamed.size(); i < n; ++i) {
-      outNamed->addColumnValue<float>(namedWeightLabels_[i], wNamed[i], "LHE weight for id "+namedWeightIDs_[i]+", relative to nominal", nanoaod::FlatTable::FloatColumn, lheWeightPrecision_);
+      outNamed->addColumnValue<float>(namedWeightLabels_[i], wNamed[i], "LHE weight for id "+namedWeightIDs_[i]+", relative to nominal", lheWeightPrecision_);
       }*/
 
     counter->incLHE(genWeight, wScale, wPDF, std::vector<double>(), std::vector<double>(), wPS);
@@ -500,7 +489,7 @@ public:
     std::string psWeightDocStr;
     setPSWeightInfo(genProd.weights(), genWeightChoice, wPS, psWeightDocStr);
     outPS = std::make_unique<nanoaod::FlatTable>(wPS.size(), "PSWeight", false);
-    outPS->addColumn<float>("", wPS, psWeightDocStr, nanoaod::FlatTable::FloatColumn, lheWeightPrecision_);
+    outPS->addColumn<float>("", wPS, psWeightDocStr, lheWeightPrecision_);
 
     counter->incGenOnly(genWeight);
     counter->incPSOnly(genWeight, wPS);
@@ -841,7 +830,7 @@ public:
             }
           } else if (std::regex_search(lines[iLine], groups, weightgroupRwgt)) {
             std::string groupname = groups.str(1);
-            if (groupname == "mg_reweighting") {
+            if (groupname.find("mg_reweighting") != std::string::npos) {
               if (lheDebug)
                 std::cout << ">>> Looks like a LHE weights for reweighting" << std::endl;
               for (++iLine; iLine < nLines; ++iLine) {
@@ -1118,6 +1107,13 @@ public:
       out->addVFloatWithNorm("LHEPdfSumw" + label,
                              "Sum of genEventWeight * LHEPdfWeight[i], divided by genEventSumw" + doclabel,
                              sumPDFs,
+                             runCounter->sumw);
+      auto sumPS = runCounter->sumPS;
+      for (auto& val : sumPS)
+        val *= norm;
+      out->addVFloatWithNorm("PSSumw" + label,
+                             "Sum of genEventWeight * PSWeight[i], divided by genEventSumw" + doclabel,
+                             sumPS,
                              runCounter->sumw);
       if (!runCounter->sumRwgt.empty()) {
         auto sumRwgts = runCounter->sumRwgt;
