@@ -35,6 +35,5 @@ TrackJetParameters = cms.PSet(
     # maximum z distance to origin to call a PV a good vertex
     MaxVtxZ             = cms.double(15.),
     useDeterministicSeed= cms.bool( True ),
-    minSeed             = cms.uint32( 14327 ),
-    applyWeight         = cms.bool( False )
+    minSeed             = cms.uint32( 14327 )
 )

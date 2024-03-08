@@ -74,6 +74,7 @@ private:
   const std::string svName_;
   const std::string svDoc_;
   const double dlenMin_, dlenSigMin_;
+  const bool storeCharge_;
 };
 
 //
@@ -90,7 +91,8 @@ VertexTableProducer::VertexTableProducer(const edm::ParameterSet& params)
       svName_(params.getParameter<std::string>("svName")),
       svDoc_(params.getParameter<std::string>("svDoc")),
       dlenMin_(params.getParameter<double>("dlenMin")),
-      dlenSigMin_(params.getParameter<double>("dlenSigMin"))
+      dlenSigMin_(params.getParameter<double>("dlenSigMin")),
+      storeCharge_(params.getParameter<bool>("storeCharge"))
 
 {
   produces<nanoaod::FlatTable>("pv");
@@ -112,53 +114,63 @@ VertexTableProducer::~VertexTableProducer() {
 
 void VertexTableProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   using namespace edm;
-  const auto& pvsScoreProd = iEvent.get(pvsScore_);
-  auto pvsIn = iEvent.getHandle(pvs_);
-
+  edm::Handle<edm::ValueMap<float>> pvsScoreIn;
+  edm::Handle<std::vector<reco::Vertex>> pvsIn;
+  iEvent.getByToken(pvs_, pvsIn);
+  iEvent.getByToken(pvsScore_, pvsScoreIn);
   auto pvTable = std::make_unique<nanoaod::FlatTable>(1, pvName_, true);
-  pvTable->addColumnValue<float>("ndof", (*pvsIn)[0].ndof(), "main primary vertex number of degree of freedom", 8);
-  pvTable->addColumnValue<float>("x", (*pvsIn)[0].position().x(), "main primary vertex position x coordinate", 10);
-  pvTable->addColumnValue<float>("y", (*pvsIn)[0].position().y(), "main primary vertex position y coordinate", 10);
-  pvTable->addColumnValue<float>("z", (*pvsIn)[0].position().z(), "main primary vertex position z coordinate", 16);
-  pvTable->addColumnValue<float>("chi2", (*pvsIn)[0].normalizedChi2(), "main primary vertex reduced chi2", 8);
+  pvTable->addColumnValue<float>(
+      "ndof", (*pvsIn)[0].ndof(), "main primary vertex number of degree of freedom", nanoaod::FlatTable::FloatColumn, 8);
+  pvTable->addColumnValue<float>(
+      "x", (*pvsIn)[0].position().x(), "main primary vertex position x coordinate", nanoaod::FlatTable::FloatColumn, 10);
+  pvTable->addColumnValue<float>(
+      "y", (*pvsIn)[0].position().y(), "main primary vertex position y coordinate", nanoaod::FlatTable::FloatColumn, 10);
+  pvTable->addColumnValue<float>(
+      "z", (*pvsIn)[0].position().z(), "main primary vertex position z coordinate", nanoaod::FlatTable::FloatColumn, 16);
+  pvTable->addColumnValue<float>(
+      "chi2", (*pvsIn)[0].normalizedChi2(), "main primary vertex reduced chi2", nanoaod::FlatTable::FloatColumn, 8);
   int goodPVs = 0;
   for (const auto& pv : *pvsIn)
     if (goodPvCut_(pv))
       goodPVs++;
-  pvTable->addColumnValue<uint8_t>("npvs", pvsIn->size(), "total number of reconstructed primary vertices");
-  pvTable->addColumnValue<uint8_t>(
-      "npvsGood", goodPVs, "number of good reconstructed primary vertices. selection:" + goodPvCutString_);
-  pvTable->addColumnValue<float>(
-      "score", pvsScoreProd.get(pvsIn.id(), 0), "main primary vertex score, i.e. sum pt2 of clustered objects", 8);
+  pvTable->addColumnValue<int>(
+      "npvs", (*pvsIn).size(), "total number of reconstructed primary vertices", nanoaod::FlatTable::IntColumn);
+  pvTable->addColumnValue<int>("npvsGood",
+                               goodPVs,
+                               "number of good reconstructed primary vertices. selection:" + goodPvCutString_,
+                               nanoaod::FlatTable::IntColumn);
+  pvTable->addColumnValue<float>("score",
+                                 (*pvsScoreIn).get(pvsIn.id(), 0),
+                                 "main primary vertex score, i.e. sum pt2 of clustered objects",
+                                 nanoaod::FlatTable::FloatColumn,
+                                 8);
 
   auto otherPVsTable =
       std::make_unique<nanoaod::FlatTable>((*pvsIn).size() > 4 ? 3 : (*pvsIn).size() - 1, "Other" + pvName_, false);
   std::vector<float> pvsz;
-  std::vector<float> pvscores;
-  for (size_t i = 1; i < (*pvsIn).size() && i < 4; i++) {
-    pvsz.push_back((*pvsIn)[i].position().z());
-    pvscores.push_back(pvsScoreProd.get(pvsIn.id(), i));
-  }
-  otherPVsTable->addColumn<float>("z", pvsz, "Z position of other primary vertices, excluding the main PV", 8);
-  otherPVsTable->addColumn<float>("score", pvscores, "scores of other primary vertices, excluding the main PV", 8);
+  for (size_t i = 1; i < (*pvsIn).size() && i < 4; i++)
+    pvsz.push_back((*pvsIn)[i - 1].position().z());
+  otherPVsTable->addColumn<float>(
+      "z", pvsz, "Z position of other primary vertices, excluding the main PV", nanoaod::FlatTable::FloatColumn, 8);
 
-  const auto& svsProd = iEvent.get(svs_);
+  edm::Handle<edm::View<reco::VertexCompositePtrCandidate>> svsIn;
+  iEvent.getByToken(svs_, svsIn);
   auto selCandSv = std::make_unique<PtrVector<reco::Candidate>>();
   std::vector<float> dlen, dlenSig, pAngle, dxy, dxySig;
-  std::vector<int16_t> charge;
+  std::vector<int> charge;
   VertexDistance3D vdist;
   VertexDistanceXY vdistXY;
 
   size_t i = 0;
   const auto& PV0 = pvsIn->front();
-  for (const auto& sv : svsProd) {
+  for (const auto& sv : *svsIn) {
     if (svCut_(sv)) {
       Measurement1D dl =
           vdist.distance(PV0, VertexState(RecoVertex::convertPos(sv.position()), RecoVertex::convertError(sv.error())));
       if (dl.value() > dlenMin_ and dl.significance() > dlenSigMin_) {
         dlen.push_back(dl.value());
         dlenSig.push_back(dl.significance());
-        edm::Ptr<reco::Candidate> c = svsProd.ptrAt(i);
+        edm::Ptr<reco::Candidate> c = svsIn->ptrAt(i);
         selCandSv->push_back(c);
         double dx = (PV0.x() - sv.vx()), dy = (PV0.y() - sv.vy()), dz = (PV0.z() - sv.vz());
         double pdotv = (dx * sv.px() + dy * sv.py() + dz * sv.pz()) / sv.p() / sqrt(dx * dx + dy * dy + dz * dz);
@@ -168,26 +180,30 @@ void VertexTableProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSe
         dxy.push_back(d2d.value());
         dxySig.push_back(d2d.significance());
 
-        int sum_charge = 0;
-        for (unsigned int id = 0; id < sv.numberOfDaughters(); ++id) {
-          const reco::Candidate* daughter = sv.daughter(id);
-          sum_charge += daughter->charge();
+        if (storeCharge_) {
+          int sum_charge = 0;
+          for (unsigned int id = 0; id < sv.numberOfDaughters(); ++id) {
+            const reco::Candidate* daughter = sv.daughter(id);
+            sum_charge += daughter->charge();
+          }
+          charge.push_back(sum_charge);
         }
-        charge.push_back(sum_charge);
       }
     }
     i++;
   }
 
   auto svsTable = std::make_unique<nanoaod::FlatTable>(selCandSv->size(), svName_, false);
-  svsTable->setDoc(svDoc_);
   // For SV we fill from here only stuff that cannot be created with the SimpleFlatTableProducer
-  svsTable->addColumn<float>("dlen", dlen, "decay length in cm", 10);
-  svsTable->addColumn<float>("dlenSig", dlenSig, "decay length significance", 10);
-  svsTable->addColumn<float>("dxy", dxy, "2D decay length in cm", 10);
-  svsTable->addColumn<float>("dxySig", dxySig, "2D decay length significance", 10);
-  svsTable->addColumn<float>("pAngle", pAngle, "pointing angle, i.e. acos(p_SV * (SV - PV)) ", 10);
-  svsTable->addColumn<int16_t>("charge", charge, "sum of the charge of the SV tracks", 10);
+  svsTable->addColumn<float>("dlen", dlen, "decay length in cm", nanoaod::FlatTable::FloatColumn, 10);
+  svsTable->addColumn<float>("dlenSig", dlenSig, "decay length significance", nanoaod::FlatTable::FloatColumn, 10);
+  svsTable->addColumn<float>("dxy", dxy, "2D decay length in cm", nanoaod::FlatTable::FloatColumn, 10);
+  svsTable->addColumn<float>("dxySig", dxySig, "2D decay length significance", nanoaod::FlatTable::FloatColumn, 10);
+  svsTable->addColumn<float>(
+      "pAngle", pAngle, "pointing angle, i.e. acos(p_SV * (SV - PV)) ", nanoaod::FlatTable::FloatColumn, 10);
+  if (storeCharge_) {
+    svsTable->addColumn<int>("charge", charge, "sum of the charge of the SV tracks", nanoaod::FlatTable::IntColumn, 10);
+  }
 
   iEvent.put(std::move(pvTable), "pv");
   iEvent.put(std::move(otherPVsTable), "otherPVs");
@@ -203,23 +219,11 @@ void VertexTableProducer::endStream() {}
 
 // ------------ method fills 'descriptions' with the allowed parameters for the module  ------------
 void VertexTableProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+  //The following says we do not know what parameters are allowed so do no validation
+  // Please change this to state exactly what you do use, even if it is no parameters
   edm::ParameterSetDescription desc;
-
-  desc.add<edm::InputTag>("pvSrc")->setComment(
-      "std::vector<reco::Vertex> and ValueMap<float> primary vertex input collections");
-  desc.add<std::string>("goodPvCut")->setComment("selection on the primary vertex");
-  desc.add<edm::InputTag>("svSrc")->setComment(
-      "reco::VertexCompositePtrCandidate compatible secondary vertex input collection");
-  desc.add<std::string>("svCut")->setComment("selection on the secondary vertex");
-
-  desc.add<double>("dlenMin")->setComment("minimum value of dl to select secondary vertex");
-  desc.add<double>("dlenSigMin")->setComment("minimum value of dl significance to select secondary vertex");
-
-  desc.add<std::string>("pvName")->setComment("name of the flat table ouput");
-  desc.add<std::string>("svName")->setComment("name of the flat table ouput");
-  desc.add<std::string>("svDoc")->setComment("a few words of documentation");
-
-  descriptions.addWithDefaultLabel(desc);
+  desc.setUnknown();
+  descriptions.addDefault(desc);
 }
 
 //define this as a plug-in

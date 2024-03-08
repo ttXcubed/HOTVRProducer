@@ -1,12 +1,14 @@
 from PhysicsTools.NanoAOD.taus_cff import *
-from PhysicsTools.NanoAOD.jetMC_cff import *
-from PhysicsTools.NanoAOD.globals_cff import genTable,genFilterTable
+from PhysicsTools.NanoAOD.jets_cff import *
+from PhysicsTools.NanoAOD.globals_cff import genTable
 from PhysicsTools.NanoAOD.met_cff import metMCTable
 from PhysicsTools.NanoAOD.genparticles_cff import *
 from PhysicsTools.NanoAOD.particlelevel_cff import *
+from PhysicsTools.NanoAOD.lheInfoTable_cfi import *
 from PhysicsTools.NanoAOD.genWeightsTable_cfi import *
 from PhysicsTools.NanoAOD.genVertex_cff import *
 from PhysicsTools.NanoAOD.common_cff import Var,CandVars
+from PhysicsTools.NanoAOD.nano_eras_cff import *
 
 nanoMetadata = cms.EDProducer("UniqueStringProducer",
     strings = cms.PSet(
@@ -16,24 +18,24 @@ nanoMetadata = cms.EDProducer("UniqueStringProducer",
 
 nanogenSequence = cms.Sequence(
     nanoMetadata+
-    cms.Sequence(particleLevelTask)+
+    particleLevel+
     genJetTable+
-    patJetPartonsNano+
+    patJetPartons+
     genJetFlavourAssociation+
     genJetFlavourTable+
     genJetAK8Table+
     genJetAK8FlavourAssociation+
     genJetAK8FlavourTable+
-    cms.Sequence(genTauTask)+
+    genTauSequence+
     genTable+
-    genFilterTable+
-    cms.Sequence(genParticleTablesTask)+
-    cms.Sequence(genVertexTablesTask)+
+    genParticleTables+
+    genVertexTables+
     tautagger+
     rivetProducerHTXS+
-    cms.Sequence(particleLevelTablesTask)+
+    particleLevelTables+
     metMCTable+
-    genWeightsTable
+    genWeightsTable+
+    lheInfoTable
 )
 
 def nanoGenCommonCustomize(process):
@@ -60,6 +62,10 @@ def customizeNanoGENFromMini(process):
     process.nanogenSequence.insert(0, process.genParticles2HepMC)
     process.nanogenSequence.insert(0, process.mergedGenParticles)
 
+    (run2_nanoAOD_92X | run2_miniAOD_80XLegacy | run2_nanoAOD_94X2016 | run2_nanoAOD_94X2016 | \
+        run2_nanoAOD_94XMiniAODv1 | run2_nanoAOD_94XMiniAODv2 | \
+        run2_nanoAOD_102Xv1).toReplaceWith(nanogenSequence, nanogenSequence.copyAndExclude([genVertexTable, genVertexT0Table]))
+
     process.metMCTable.src = "slimmedMETs"
     process.metMCTable.variables.pt = Var("genMET.pt", float, doc="pt")
     process.metMCTable.variables.phi = Var("genMET.phi", float, doc="phi")
@@ -67,7 +73,7 @@ def customizeNanoGENFromMini(process):
 
     process.rivetProducerHTXS.HepMCCollection = "genParticles2HepMCHiggsVtx:unsmeared"
     process.genParticleTable.src = "prunedGenParticles"
-    process.patJetPartonsNano.particles = "prunedGenParticles"
+    process.patJetPartons.particles = "prunedGenParticles"
     process.particleLevel.src = "genParticles2HepMC:unsmeared"
 
     process.genJetTable.src = "slimmedGenJets"
@@ -85,11 +91,11 @@ def customizeNanoGEN(process):
 
     process.rivetProducerHTXS.HepMCCollection = "generatorSmeared"
     process.genParticleTable.src = "genParticles"
-    process.patJetPartonsNano.particles = "genParticles"
+    process.patJetPartons.particles = "genParticles"
     process.particleLevel.src = "generatorSmeared"
 
-    process.genJetTable.src = "ak4GenJetsNoNu"
-    process.genJetAK8Table.src = "ak8GenJetsNoNu"
+    process.genJetTable.src = "ak4GenJets"
+    process.genJetAK8Table.src = "ak8GenJets"
     process.tauGenJetsForNano.GenParticles = "genParticles"
     process.genVisTaus.srcGenParticles = "genParticles"
 

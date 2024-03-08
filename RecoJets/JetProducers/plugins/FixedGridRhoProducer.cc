@@ -7,34 +7,33 @@ using namespace std;
 FixedGridRhoProducer::FixedGridRhoProducer(const edm::ParameterSet& iConfig) {
   pfCandidatesTag_ = iConfig.getParameter<edm::InputTag>("pfCandidatesTag");
   string etaRegion = iConfig.getParameter<string>("EtaRegion");
-  if (etaRegion == "Central")
-    myEtaRegion = FixedGridEnergyDensity::Central;
-  else if (etaRegion == "Forward")
-    myEtaRegion = FixedGridEnergyDensity::Forward;
-  else if (etaRegion == "All")
-    myEtaRegion = FixedGridEnergyDensity::All;
+  if (etaRegion=="Central") myEtaRegion = FixedGridEnergyDensity::Central;
+  else if (etaRegion=="Forward") myEtaRegion = FixedGridEnergyDensity::Forward;
+  else if (etaRegion=="All") myEtaRegion = FixedGridEnergyDensity::All;
   else {
-    edm::LogWarning("FixedGridRhoProducer")
-        << "Wrong EtaRegion parameter: " << etaRegion << ". Using EtaRegion = Central";
+    edm::LogWarning("FixedGridRhoProducer") << "Wrong EtaRegion parameter: " << etaRegion << ". Using EtaRegion = Central";  
     myEtaRegion = FixedGridEnergyDensity::Central;
   }
   produces<double>();
 
   input_pfcoll_token_ = consumes<reco::PFCandidateCollection>(pfCandidatesTag_);
+
 }
 
-FixedGridRhoProducer::~FixedGridRhoProducer() {}
+FixedGridRhoProducer::~FixedGridRhoProducer(){} 
 
 void FixedGridRhoProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
-  edm::Handle<reco::PFCandidateCollection> pfColl;
-  iEvent.getByToken(input_pfcoll_token_, pfColl);
 
-  algo = new FixedGridEnergyDensity(pfColl.product());
+   edm::Handle<reco::PFCandidateCollection> pfColl;
+   iEvent.getByToken(input_pfcoll_token_, pfColl);
 
-  double result = algo->fixedGridRho(myEtaRegion);
-  iEvent.put(std::make_unique<double>(result));
+   algo = new FixedGridEnergyDensity(pfColl.product());
 
-  delete algo;
+   double result = algo->fixedGridRho(myEtaRegion);
+   iEvent.put(std::make_unique<double>(result));
+
+   delete algo;
+ 
 }
 
 DEFINE_FWK_MODULE(FixedGridRhoProducer);

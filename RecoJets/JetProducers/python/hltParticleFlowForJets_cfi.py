@@ -53,7 +53,7 @@ hltParticleFlowBlock = cms.EDProducer("PFBlockProducer",
 )
 
 
-from RecoParticleFlow.PFProducer.particleFlow_cff import particleFlowTmp
+from RecoParticleFlow.PFProducer.particleFlow_cfi import particleFlowTmp
 
 hltParticleFlow = particleFlowTmp.clone(
     GedPhotonValueMap = cms.InputTag(""),
@@ -71,6 +71,7 @@ hltParticleFlow = particleFlowTmp.clone(
     rejectTracks_Bad = cms.bool(False),
     muons = cms.InputTag(""),
     postMuonCleaning = cms.bool(False),
+    usePFSCEleCalib = cms.bool(False)
 )
 
 

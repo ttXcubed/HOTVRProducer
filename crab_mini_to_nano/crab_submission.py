@@ -1,5 +1,5 @@
-import CRABClient
-from WMCore.Configuration import Configuration
+from CRABClient.UserUtilities import config, getLumiListInValidFiles
+# from WMCore.DataStructs.LumiList import LumiList
 import sys,os
 import copy
 import argparse
@@ -15,8 +15,8 @@ args = parser.parse_args()
 
 if args.isData:
     goldenJSON_file = ''
-    if args.year == '2022' or args.year == '2022_EE': 
-        goldenJSON_dir = '{}/crab_mini_to_nano/goldenJSON_files/2022'.format(os.getcwd())
+    goldenJSON_dir = 'goldenJSON_files/'+args.year
+    if args.year == '2016preVFP': goldenJSON_dir = 'goldenJSON_files/2016'
     for goldenJSON_path in os.listdir(goldenJSON_dir):
         if os.path.isfile(os.path.join(goldenJSON_dir, goldenJSON_path)):
             # add filename to list
@@ -24,7 +24,7 @@ if args.isData:
 
 # requestName = "nanoaodUL"+args.year+"v1_230202"
 # requestName = "testNANO18_2"
-requestName = "nanoaod_hotvr_UL"+args.year+"v1_230112"
+requestName = "nanoaod_hotvr_UL"+args.year+"v1_230510"
 
 yaml_file_dict = {}
 with open('{}/crab_mini_to_nano/input_files.yaml'.format(os.getcwd())) as yaml_f:
@@ -50,9 +50,7 @@ for data_tag, dataset in zip(data_tags, datasets):
 print(myInputFiles)
 
 userName = 'gmilella' #getUsernameFromSiteDB() 
-# configTmpl = config()
-configTmpl = Configuration()
-
+configTmpl = config()
 # ----
 configTmpl.section_('General')
 configTmpl.General.transferOutputs = True
@@ -69,8 +67,8 @@ else:
     configTmpl.JobType.psetName = '{}/mini_to_nano_producer/MiniToNano_producer_{}.py'.format(os.getcwd(), args.year)
 configTmpl.JobType.outputFiles = []
 configTmpl.JobType.allowUndistributedCMSSW = True
-# configTmpl.JobType.maxJobRuntimeMin= 27*60
-# configTmpl.JobType.maxMemoryMB = 2500
+configTmpl.JobType.maxJobRuntimeMin= 25*60
+configTmpl.JobType.maxMemoryMB = 2500
 # ----
 
 # ----
@@ -78,13 +76,13 @@ configTmpl.section_('Data')
 if args.isData:
     configTmpl.Data.inputDBS = 'global'
     configTmpl.Data.splitting = 'LumiBased'
-    configTmpl.Data.unitsPerJob = 10
+    configTmpl.Data.unitsPerJob = 150
 else:
     configTmpl.Data.inputDBS = 'global'
     configTmpl.Data.splitting = 'FileBased'
-    configTmpl.Data.unitsPerJob = 4
+    configTmpl.Data.unitsPerJob = 20
 
-# configTmpl.Data.totalUnits = 1  # ACTIVE WHEN TESTING 
+configTmpl.Data.totalUnits = 1  # ACTIVE WHEN TESTING 
 configTmpl.Data.publication = True
 # ----
 
@@ -98,14 +96,14 @@ if __name__ == '__main__':
 
     from CRABAPI.RawCommand import crabCommand
     from CRABClient.ClientExceptions import ClientException
-    # from httplib import HTTPException
+    from httplib import HTTPException
     from multiprocessing import Process
 
     def submit(config):
         try:
             crabCommand('submit',  config = config)
-        # except HTTPException as hte:
-        #     print("Failed submitting task: %s" % (hte.headers))
+        except HTTPException as hte:
+            print("Failed submitting task: %s" % (hte.headers))
         except ClientException as cle:
             print("Failed submitting task: %s" % (cle))
 
@@ -124,8 +122,6 @@ if __name__ == '__main__':
         if args.isData:
             config.Data.outLFNDirBase = "/store/user/"+userName+"/data_"+args.year+"/"+requestName
             config.Data.lumiMask = goldenJSON_file
-            # if jobName[-1] == "E": 
-            #     config.JobType.psetName = '{}/mini_to_nano_producer/MiniToNano_producer_data_E_{}.py'.format(os.getcwd(), args.year) 
         else: 
             config.Data.outLFNDirBase = "/store/user/"+userName+"/bkg_"+args.year+"/"+requestName
 
@@ -147,12 +143,12 @@ if __name__ == '__main__':
         print("Submitting job ",i," of ",len(myInputFiles.keys()),":",config.General.workArea)
         
         
-        p = Process(target=submit, args=(config,))
-        p.start()
-        p.join()
+        # p = Process(target=submit, args=(config,))
+        # p.start()
+        # p.join()
             
-        #break
+        # #break
 
-        print
-        print
+        # print
+        # print
         

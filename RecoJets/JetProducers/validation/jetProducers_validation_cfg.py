@@ -20,13 +20,8 @@ process.fileSaver = cms.EDFilter(
 
 # MESSAGELOGGER
 process.MessageLogger = cms.Service("MessageLogger",
-    cerr = cms.untracked.PSet(
-        enable = cms.untracked.bool(False)
-    ),
-    cout = cms.untracked.PSet(
-        enable = cms.untracked.bool(True),
-        threshold = cms.untracked.string('WARNING')
-    )
+    destinations = cms.untracked.vstring('cout'),
+    cout         = cms.untracked.PSet(threshold = cms.untracked.string('WARNING'))
 )
 
 # DQMSTORE

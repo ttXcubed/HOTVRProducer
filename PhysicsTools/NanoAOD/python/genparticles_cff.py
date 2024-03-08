@@ -1,7 +1,8 @@
 import FWCore.ParameterSet.Config as cms
 from  PhysicsTools.NanoAOD.common_cff import *
-from PhysicsTools.NanoAOD.simpleCandidateFlatTableProducer_cfi import simpleCandidateFlatTableProducer
 
+from Configuration.Eras.Modifier_run2_nanoAOD_106Xv1_cff import run2_nanoAOD_106Xv1
+from Configuration.Eras.Modifier_run2_nanoAOD_devel_cff import run2_nanoAOD_devel
 
 ##################### User floats producers, selectors ##########################
 
@@ -23,16 +24,20 @@ finalGenParticles = cms.EDProducer("GenParticlePruner",
         "keep abs(pdgId) == 23 || abs(pdgId) == 24 || abs(pdgId) == 25 || abs(pdgId) == 37 ",   # keep VIP(articles)s
         #"keep abs(pdgId) == 310 && abs(eta) < 2.5 && pt > 1 ",                                                     # keep K0
         "keep (1000001 <= abs(pdgId) <= 1000039 ) || ( 2000001 <= abs(pdgId) <= 2000015)", #keep SUSY fiction particles
+ 		
    )
 )
 
 
 
 ##################### Tables for final output and docs ##########################
-genParticleTable = simpleCandidateFlatTableProducer.clone(
+genParticleTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
     src = cms.InputTag("finalGenParticles"),
+    cut = cms.string(""), #we should not filter after pruning
     name= cms.string("GenPart"),
     doc = cms.string("interesting gen particles "),
+    singleton = cms.bool(False), # the number of entries is variable
+    extension = cms.bool(False), # this is the main table for the taus
     variables = cms.PSet(
          pt  = Var("pt",  float, precision=8),
          phi = Var("phi", float,precision=8),
@@ -40,7 +45,7 @@ genParticleTable = simpleCandidateFlatTableProducer.clone(
          mass = Var("?!((abs(pdgId)>=1 && abs(pdgId)<=5) || (abs(pdgId)>=11 && abs(pdgId)<=16) || pdgId==21 || pdgId==111 || abs(pdgId)==211 || abs(pdgId)==421 || abs(pdgId)==411 || (pdgId==22 && mass<1))?mass:0", float,precision="?((abs(pdgId)==6 || abs(pdgId)>1000000) && statusFlags().isLastCopy())?20:8",doc="Mass stored for all particles with the exception of quarks (except top), leptons/neutrinos, photons with mass < 1 GeV, gluons, pi0(111), pi+(211), D0(421), and D+(411). For these particles, you can lookup the value from PDG."),
          pdgId  = Var("pdgId", int, doc="PDG id"),
          status  = Var("status", int, doc="Particle status. 1=stable"),
-         genPartIdxMother = Var("?numberOfMothers>0?motherRef(0).key():-1", "int16", doc="index of the mother particle"),
+         genPartIdxMother = Var("?numberOfMothers>0?motherRef(0).key():-1", int, doc="index of the mother particle"),
          statusFlags = (Var(
             "statusFlags().isLastCopyBeforeFSR()                  * 16384 +"
             "statusFlags().isLastCopy()                           * 8192  +"
@@ -57,7 +62,7 @@ genParticleTable = simpleCandidateFlatTableProducer.clone(
             "statusFlags().isTauDecayProduct()                    * 4     +"
             "statusFlags().isDecayedLeptonHadron()                * 2     +"
             "statusFlags().isPrompt()                             * 1      ",
-            "uint16", doc=("gen status flags stored bitwise, bits are: "
+            int, doc=("gen status flags stored bitwise, bits are: "
                 "0 : isPrompt, "
                 "1 : isDecayedLeptonHadron, "
                 "2 : isTauDecayProduct, "
@@ -77,6 +82,7 @@ genParticleTable = simpleCandidateFlatTableProducer.clone(
     )
 )
 
-genParticleTask = cms.Task(finalGenParticles)
-genParticleTablesTask = cms.Task(genParticleTable)
+(run2_nanoAOD_106Xv1 & ~run2_nanoAOD_devel).toModify( genParticleTable.variables, mass = Var("?!((abs(pdgId)>=1 && abs(pdgId)<=5) || (abs(pdgId)>=11 && abs(pdgId)<=16) || pdgId==21 || pdgId==111 || abs(pdgId)==211 || abs(pdgId)==421 || abs(pdgId)==411 || (pdgId==22 && mass<1))?mass:0", float,precision="?(abs(pdgId)==6 && statusFlags().isLastCopy())?20:8",doc="Mass stored for all particles with the exception of quarks (except top), leptons/neutrinos, photons with mass < 1 GeV, gluons, pi0(111), pi+(211), D0(421), and D+(411). For these particles, you can lookup the value from PDG."))
 
+genParticleSequence = cms.Sequence(finalGenParticles)
+genParticleTables = cms.Sequence(genParticleTable)
