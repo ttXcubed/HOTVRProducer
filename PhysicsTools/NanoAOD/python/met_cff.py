@@ -1,12 +1,16 @@
 import FWCore.ParameterSet.Config as cms
 from  PhysicsTools.NanoAOD.common_cff import *
-from PhysicsTools.NanoAOD.simpleSingletonCandidateFlatTableProducer_cfi import simpleSingletonCandidateFlatTableProducer
+
+from PhysicsTools.NanoAOD.nano_eras_cff import *
+
 
 ##################### Tables for final output and docs ##########################
-metTable = simpleSingletonCandidateFlatTableProducer.clone(
+metTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
     src = cms.InputTag("slimmedMETs"),
     name = cms.string("MET"),
     doc = cms.string("slimmedMET, type-1 corrected PF MET"),
+    singleton = cms.bool(True),  # there's always exactly one MET per event
+    extension = cms.bool(False), # this is the main table for the MET
     variables = cms.PSet(PTVars,
        sumEt = Var("sumEt()", float, doc="scalar sum of Et",precision=10),
        covXX = Var("getSignificanceMatrix().At(0,0)",float,doc="xx element of met covariance matrix", precision=8),
@@ -21,10 +25,12 @@ metTable = simpleSingletonCandidateFlatTableProducer.clone(
 )
 
 
-rawMetTable = simpleSingletonCandidateFlatTableProducer.clone(
+rawMetTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
     src = metTable.src,
     name = cms.string("RawMET"),
     doc = cms.string("raw PF MET"),
+    singleton = cms.bool(True),  # there's always exactly one MET per event
+    extension = cms.bool(False), # this is the main table for the MET
     variables = cms.PSet(#NOTA BENE: we don't copy PTVars here!
        pt  = Var("uncorPt",  float, doc="pt", precision=10),
        phi = Var("uncorPhi", float, doc="phi", precision=10),
@@ -33,10 +39,12 @@ rawMetTable = simpleSingletonCandidateFlatTableProducer.clone(
 )
 
 
-caloMetTable = simpleSingletonCandidateFlatTableProducer.clone(
+caloMetTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
     src = metTable.src,
     name = cms.string("CaloMET"),
     doc = cms.string("Offline CaloMET (muon corrected)"),
+    singleton = cms.bool(True),  # there's always exactly one MET per event
+    extension = cms.bool(False), # this is the main table for the MET
     variables = cms.PSet(#NOTA BENE: we don't copy PTVars here!
        pt  = Var("caloMETPt",  float, doc="pt", precision=10),
        phi = Var("caloMETPhi", float, doc="phi", precision=10),
@@ -44,10 +52,12 @@ caloMetTable = simpleSingletonCandidateFlatTableProducer.clone(
     ),
 )
 
-puppiMetTable = simpleSingletonCandidateFlatTableProducer.clone(
+puppiMetTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
     src = cms.InputTag("slimmedMETsPuppi"),
     name = cms.string("PuppiMET"),
     doc = cms.string("PUPPI  MET"),
+    singleton = cms.bool(True),  # there's always exactly one MET per event
+    extension = cms.bool(False), # this is the main table for the MET
     variables = cms.PSet(PTVars,
        sumEt = Var("sumEt()", float, doc="scalar sum of Et",precision=10),
        ptJERUp = Var("shiftedPt('JetResUp')", float, doc="JER up pt",precision=10),
@@ -65,10 +75,12 @@ puppiMetTable = simpleSingletonCandidateFlatTableProducer.clone(
     ),
 )
 
-rawPuppiMetTable = simpleSingletonCandidateFlatTableProducer.clone(
+rawPuppiMetTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
     src = puppiMetTable.src,
     name = cms.string("RawPuppiMET"),
     doc = cms.string("raw Puppi MET"),
+    singleton = cms.bool(True),  # there's always exactly one MET per event
+    extension = cms.bool(False), # this is the main table for the MET
     variables = cms.PSet(#NOTA BENE: we don't copy PTVars here!
        pt  = Var("uncorPt",  float, doc="pt", precision=10),
        phi = Var("uncorPhi", float, doc="phi", precision=10),
@@ -76,10 +88,12 @@ rawPuppiMetTable = simpleSingletonCandidateFlatTableProducer.clone(
     ),)
 
 
-tkMetTable = simpleSingletonCandidateFlatTableProducer.clone(
+tkMetTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
     src = metTable.src,
     name = cms.string("TkMET"),
     doc = cms.string("Track MET computed with tracks from PV0 ( pvAssociationQuality()>=4 ) "),
+    singleton = cms.bool(True),  # there's always exactly one MET per event
+    extension = cms.bool(False), # this is the main table for the TkMET
     variables = cms.PSet(#NOTA BENE: we don't copy PTVars here!
        pt = Var("corPt('RawTrk')", float, doc="raw track MET pt",precision=10),
        phi = Var("corPhi('RawTrk')", float, doc="raw track MET phi",precision=10),
@@ -87,10 +101,12 @@ tkMetTable = simpleSingletonCandidateFlatTableProducer.clone(
     ),
 )
 
-chsMetTable = simpleSingletonCandidateFlatTableProducer.clone(
+chsMetTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
     src = metTable.src,
     name = cms.string("ChsMET"),
     doc = cms.string("PF MET computed with CHS PF candidates"),
+    singleton = cms.bool(True),  # there's always exactly one MET per event
+    extension = cms.bool(False), # this is the main table for the TkMET
     variables = cms.PSet(#NOTA BENE: we don't copy PTVars here!
        pt = Var("corPt('RawChs')", float, doc="raw chs PF MET pt",precision=10),
        phi = Var("corPhi('RawChs')", float, doc="raw chs PF MET phi",precision=10),
@@ -98,32 +114,44 @@ chsMetTable = simpleSingletonCandidateFlatTableProducer.clone(
     ),
 )
 
-deepMetResolutionTuneTable = simpleSingletonCandidateFlatTableProducer.clone(
+deepMetResolutionTuneTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
     # current deepMets are saved in slimmedMETs in MiniAOD,
     # in the same way as chsMet/TkMET
     src = metTable.src,
     name = cms.string("DeepMETResolutionTune"),
     doc = cms.string("Deep MET trained with resolution tune"),
+    singleton = cms.bool(True), # there's always exactly one MET per event
+    extension = cms.bool(False), # this is the main table for the MET
     variables = cms.PSet(#NOTA BENE: we don't copy PTVars here!
         pt = Var("corPt('RawDeepResolutionTune')", float, doc="DeepMET ResolutionTune pt",precision=-1),
         phi = Var("corPhi('RawDeepResolutionTune')", float, doc="DeepmET ResolutionTune phi",precision=12),
     ),
 )
 
-deepMetResponseTuneTable = simpleSingletonCandidateFlatTableProducer.clone(
+deepMetResponseTuneTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
     src = metTable.src,
     name = cms.string("DeepMETResponseTune"),
     doc = cms.string("Deep MET trained with extra response tune"),
+    singleton = cms.bool(True), # there's always exactly one MET per event
+    extension = cms.bool(False), # this is the main table for the MET
     variables = cms.PSet(#NOTA BENE: we don't copy PTVars here!
         pt = Var("corPt('RawDeepResponseTune')", float, doc="DeepMET ResponseTune pt",precision=-1),
         phi = Var("corPhi('RawDeepResponseTune')", float, doc="DeepMET ResponseTune phi",precision=12),
     ),
 )
 
-metMCTable = simpleSingletonCandidateFlatTableProducer.clone(
+metFixEE2017Table = metTable.clone()
+metFixEE2017Table.src = cms.InputTag("slimmedMETsFixEE2017")
+metFixEE2017Table.name = cms.string("METFixEE2017")
+metFixEE2017Table.doc = cms.string("Type-1 corrected PF MET, with fixEE2017 definition")
+
+
+metMCTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
     src = metTable.src,
     name = cms.string("GenMET"),
     doc = cms.string("Gen MET"),
+    singleton = cms.bool(True),  
+    extension = cms.bool(False),
     variables = cms.PSet(
        pt  = Var("genMET.pt",  float, doc="pt", precision=10),
        phi = Var("genMET.phi", float, doc="phi", precision=10),
@@ -131,5 +159,11 @@ metMCTable = simpleSingletonCandidateFlatTableProducer.clone(
 )
 
 
-metTablesTask = cms.Task( metTable, rawMetTable, caloMetTable, puppiMetTable, rawPuppiMetTable, tkMetTable, chsMetTable, deepMetResolutionTuneTable, deepMetResponseTuneTable )
-metMCTask = cms.Task( metMCTable )
+
+metTables = cms.Sequence( metTable + rawMetTable + caloMetTable + puppiMetTable + rawPuppiMetTable+ tkMetTable + chsMetTable)
+deepMetTables = cms.Sequence( deepMetResolutionTuneTable + deepMetResponseTuneTable )
+_withFixEE2017_sequence = cms.Sequence(metTables.copy() + metFixEE2017Table)
+for modifier in run2_nanoAOD_94XMiniAODv1, run2_nanoAOD_94XMiniAODv2:
+    modifier.toReplaceWith(metTables,_withFixEE2017_sequence) # only in old miniAOD, the new ones will come from the UL rereco
+metMC = cms.Sequence( metMCTable )
+

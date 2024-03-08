@@ -29,6 +29,5 @@ CaloJetParameters = cms.PSet(
     Rho_EtaMax          = cms.double( 4.4),
     voronoiRfact        = cms.double(-0.9),
     useDeterministicSeed= cms.bool( True ),
-    minSeed             = cms.uint32( 14327 ),
-    applyWeight         = cms.bool( False )
+    minSeed             = cms.uint32( 14327 )
 )

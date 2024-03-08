@@ -6,11 +6,11 @@ from RecoJets.JetProducers.PFJetParameters_cfi import *
 # with adjacency 
 cmsTopTagPFJetsCHS = cms.EDProducer(
     "CATopJetProducer",
-    PFJetParameters.clone(src = "ak8PFJetsCHSConstituents:constituents",
-                          doAreaFastjet = True,
-                          doRhoFastjet = False,
-			  jetPtMin = 100.0
-                          ),
+    PFJetParameters.clone( src = cms.InputTag("ak8PFJetsCHSConstituents", "constituents"),
+                           doAreaFastjet = cms.bool(True),
+                           doRhoFastjet = cms.bool(False),
+			   jetPtMin = cms.double(100.0)
+                           ),
     AnomalousCellParameters,
     CATopJetParameters,
     jetAlgorithm = cms.string("CambridgeAachen"),
@@ -19,18 +19,20 @@ cmsTopTagPFJetsCHS = cms.EDProducer(
     )
 
 hepTopTagPFJetsCHS = cmsTopTagPFJetsCHS.clone(
-    rParam  = 1.5,
-    tagAlgo = 2,
-    muCut = cms.double(0.8),
-    maxSubjetMass = cms.double(30.0),
-    useSubjetMass = cms.bool(False)
+	rParam = cms.double(1.5),
+	tagAlgo = cms.int32(2),
+        muCut = cms.double(0.8),
+        maxSubjetMass = cms.double(30.0),
+        useSubjetMass = cms.bool(False)
 )
 
+
 jhuTopTagPFJetsCHS = cmsTopTagPFJetsCHS.clone(
-    ptFrac    = cms.double(0.05),
+    ptFrac = cms.double(0.05),
     deltaRCut = cms.double(0.19),
     cosThetaWMax = cms.double(0.7)
 )
+
 
 caTopTagInfos = cms.EDProducer("CATopJetTagger",
                                     src = cms.InputTag("cmsTopTagPFJetsCHS"),
@@ -46,7 +48,7 @@ caTopTagInfos = cms.EDProducer("CATopJetTagger",
                                     )
 
 hepTopTagInfos = caTopTagInfos.clone(
-    src = "hepTopTagPFJetsCHS"
+	src = cms.InputTag("hepTopTagPFJetsCHS")
 )
 
 caTopTaggersTask = cms.Task(

@@ -2,7 +2,7 @@
 //
 // Package:    BasicToPFJet
 // Class:      BasicToPFJet
-//
+// 
 /**\class BasicToPFJet BasicToPFJet.cc UserCode/BasicToPFJet/plugins/BasicToPFJet.cc
 
  Description: converts reco::BasicJets to reco::PFJets and adds the new PFJetCollection to the event. Originally designed
@@ -31,18 +31,24 @@
 //include header file
 #include "RecoJets/JetProducers/plugins/BasicToPFJet.h"
 
-BasicToPFJet::BasicToPFJet(const edm::ParameterSet& PSet)
-    : src_(PSet.getParameter<edm::InputTag>("src")), inputToken_(consumes<reco::BasicJetCollection>(src_)) {
+BasicToPFJet::BasicToPFJet(const edm::ParameterSet& PSet) :
+  src_ (PSet.getParameter<edm::InputTag>("src")),
+  inputToken_ (consumes<reco::BasicJetCollection>(src_))
+{
   produces<reco::PFJetCollection>();
 }
 
-void BasicToPFJet::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+BasicToPFJet::~BasicToPFJet(){}
+
+
+void BasicToPFJet::fillDescriptions(edm::ConfigurationDescriptions& descriptions){
   edm::ParameterSetDescription desc;
-  desc.add<edm::InputTag>("src", edm::InputTag(""));
-  descriptions.add("BasicToPFJet", desc);
+  desc.add<edm::InputTag>("src",edm::InputTag(""));
+  descriptions.add("BasicToPFJet",desc);
 }
 
-void BasicToPFJet::produce(edm::StreamID, edm::Event& Event, const edm::EventSetup& EventSetup) const {
+void BasicToPFJet::produce( edm::Event& Event, const edm::EventSetup& EventSetup){
+
   //first get the basic jet collection
   edm::Handle<reco::BasicJetCollection> BasicJetColl;
   Event.getByToken(inputToken_, BasicJetColl);
@@ -57,8 +63,8 @@ void BasicToPFJet::produce(edm::StreamID, edm::Event& Event, const edm::EventSet
   reco::BasicJetCollection::const_iterator i = BasicJetColl->begin();
 
   //loop over basic jets and convert them to pfjets
-  for (; i != BasicJetColl->end(); i++) {
-    reco::PFJet pfjet(i->p4(), i->vertex(), specific);
+  for(; i!=BasicJetColl->end(); i++){
+    reco::PFJet pfjet(i->p4(),i->vertex(),specific);
     PFJetColl->push_back(pfjet);
   }
 
@@ -66,5 +72,6 @@ void BasicToPFJet::produce(edm::StreamID, edm::Event& Event, const edm::EventSet
   Event.put(std::move(PFJetColl));
 }
 
+ 
 //define as plug-in for the framework
 DEFINE_FWK_MODULE(BasicToPFJet);

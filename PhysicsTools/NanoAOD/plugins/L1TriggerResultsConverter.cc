@@ -64,12 +64,11 @@ private:
   const edm::EDGetTokenT<L1GlobalTriggerReadoutRecord> tokenLegacy_;
   const edm::EDGetTokenT<GlobalAlgBlkBxCollection> token_;
   const edm::EDGetTokenT<GlobalExtBlkBxCollection> token_ext_;
-  edm::ESGetToken<L1GtTriggerMenu, L1GtTriggerMenuRcd> l1gtmenuToken_;
-  edm::ESGetToken<L1GtTriggerMask, L1GtTriggerMaskAlgoTrigRcd> l1gtalgoMaskToken_;
-  edm::ESGetToken<L1TUtmTriggerMenu, L1TUtmTriggerMenuRcd> l1utmTrigToken_;
   std::vector<std::string> names_;
   std::vector<unsigned int> mask_;
   std::vector<unsigned int> indices_;
+
+  const unsigned int m_triggerRulePrefireVetoBit = 255;
 };
 
 //
@@ -84,10 +83,7 @@ L1TriggerResultsConverter::L1TriggerResultsConverter(const edm::ParameterSet& pa
                         : edm::EDGetTokenT<GlobalAlgBlkBxCollection>()),
       token_ext_(store_unprefireable_bit_
                      ? consumes<GlobalExtBlkBxCollection>(params.getParameter<edm::InputTag>("src_ext"))
-                     : edm::EDGetTokenT<GlobalExtBlkBxCollection>()),
-      l1gtmenuToken_(esConsumes<edm::Transition::BeginRun>()),
-      l1gtalgoMaskToken_(esConsumes<edm::Transition::BeginRun>()),
-      l1utmTrigToken_(esConsumes<edm::Transition::BeginRun>()) {
+                     : edm::EDGetTokenT<GlobalExtBlkBxCollection>()) {
   produces<edm::TriggerResults>();
 }
 
@@ -105,14 +101,20 @@ void L1TriggerResultsConverter::beginRun(edm::Run const&, edm::EventSetup const&
   names_.clear();
   indices_.clear();
   if (legacyL1_) {
-    auto const& mapping = setup.getHandle(l1gtmenuToken_)->gtAlgorithmAliasMap();
+    edm::ESHandle<L1GtTriggerMenu> handleMenu;
+    edm::ESHandle<L1GtTriggerMask> handleAlgoMask;
+    setup.get<L1GtTriggerMenuRcd>().get(handleMenu);
+    auto const& mapping = handleMenu->gtAlgorithmAliasMap();
     for (auto const& keyval : mapping) {
       names_.push_back(keyval.first);
       indices_.push_back(keyval.second.algoBitNumber());
     }
-    mask_ = setup.getHandle(l1gtalgoMaskToken_)->gtTriggerMask();
+    setup.get<L1GtTriggerMaskAlgoTrigRcd>().get(handleAlgoMask);
+    mask_ = handleAlgoMask->gtTriggerMask();
   } else {
-    auto const& mapping = setup.getHandle(l1utmTrigToken_)->getAlgorithmMap();
+    edm::ESHandle<L1TUtmTriggerMenu> menu;
+    setup.get<L1TUtmTriggerMenuRcd>().get(menu);
+    auto const& mapping = menu->getAlgorithmMap();
     for (auto const& keyval : mapping) {
       names_.push_back(keyval.first);
       indices_.push_back(keyval.second.getIndex());
@@ -125,39 +127,39 @@ void L1TriggerResultsConverter::beginRun(edm::Run const&, edm::EventSetup const&
 // ------------ method called to produce the data  ------------
 
 void L1TriggerResultsConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
+  using namespace edm;
   const std::vector<bool>* wordp = nullptr;
   bool unprefireable_bit = false;
   if (!legacyL1_) {
-    const auto& resultsProd = iEvent.get(token_);
-    if (not resultsProd.isEmpty(0)) {
-      wordp = &resultsProd.at(0, 0).getAlgoDecisionFinal();
-    }
+    edm::Handle<GlobalAlgBlkBxCollection> handleResults;
+    iEvent.getByToken(token_, handleResults);
+    wordp = &handleResults->at(0, 0).getAlgoDecisionFinal();
     if (store_unprefireable_bit_) {
-      auto handleExtResults = iEvent.getHandle(token_ext_);
-      if (handleExtResults.isValid()) {
-        if (not handleExtResults->isEmpty(0)) {
-          unprefireable_bit = handleExtResults->at(0, 0).getExternalDecision(GlobalExtBlk::maxExternalConditions - 1);
-        }
-      } else {
-        LogDebug("Unprefirable bit not found, always set to false");
+      edm::Handle<GlobalExtBlkBxCollection> handleExtResults;
+      iEvent.getByToken(token_ext_, handleExtResults);
+      if (handleExtResults->size() != 0) {
+        unprefireable_bit = handleExtResults->at(0, 0).getExternalDecision(
+            std::max(m_triggerRulePrefireVetoBit, GlobalExtBlk::maxExternalConditions - 1));
       }
     }
   } else {
     // Legacy access
-    const auto& resultsProd = iEvent.get(tokenLegacy_);
-    wordp = &resultsProd.decisionWord();
+    edm::Handle<L1GlobalTriggerReadoutRecord> handleResults;
+    iEvent.getByToken(tokenLegacy_, handleResults);
+    wordp = &handleResults->decisionWord();
   }
-  edm::HLTGlobalStatus l1bitsAsHLTStatus(names_.size());
+  auto const& word = *wordp;
+  HLTGlobalStatus l1bitsAsHLTStatus(names_.size());
   unsigned indices_size = indices_.size();
   for (size_t nidx = 0; nidx < indices_size; nidx++) {
-    unsigned int const index = indices_[nidx];
-    bool result = wordp ? wordp->at(index) : false;
-    if (not mask_.empty())
-      result &= (mask_.at(index) != 0);
-    l1bitsAsHLTStatus[nidx] = edm::HLTPathStatus(result ? edm::hlt::Pass : edm::hlt::Fail);
+    unsigned int index = indices_[nidx];
+    bool result = word[index];
+    if (!mask_.empty())
+      result &= (mask_[index] != 0);
+    l1bitsAsHLTStatus[nidx] = HLTPathStatus(result ? edm::hlt::Pass : edm::hlt::Fail);
   }
   if (store_unprefireable_bit_)
-    l1bitsAsHLTStatus[indices_size] = edm::HLTPathStatus(unprefireable_bit ? edm::hlt::Pass : edm::hlt::Fail);
+    l1bitsAsHLTStatus[indices_size] = HLTPathStatus(unprefireable_bit ? edm::hlt::Pass : edm::hlt::Fail);
   //mimic HLT trigger bits for L1
   auto out = std::make_unique<edm::TriggerResults>(l1bitsAsHLTStatus, names_);
   iEvent.put(std::move(out));

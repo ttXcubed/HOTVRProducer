@@ -37,8 +37,6 @@
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Utilities/interface/StreamID.h"
 
-#include "CommonTools/Egamma/interface/EffectiveAreas.h"
-
 #include "DataFormats/NanoAOD/interface/FlatTable.h"
 #include "DataFormats/Common/interface/ValueMap.h"
 #include "DataFormats/NanoAOD/interface/MergeableCounterTable.h"
@@ -50,7 +48,7 @@
 
 class LHCInfoProducer : public edm::global::EDProducer<edm::BeginLuminosityBlockProducer> {
 public:
-  LHCInfoProducer(edm::ParameterSet const&) : lhcinfoToken_(esConsumes<edm::Transition::BeginLuminosityBlock>()) {
+  LHCInfoProducer(edm::ParameterSet const&) {
     produces<nanoaod::MergeableCounterTable, edm::Transition::BeginLuminosityBlock>();
   }
   ~LHCInfoProducer() override {}
@@ -59,20 +57,22 @@ public:
   void produce(edm::StreamID id, edm::Event& iEvent, const edm::EventSetup& iSetup) const override {}
 
   void globalBeginLuminosityBlockProduce(edm::LuminosityBlock& iLumi, edm::EventSetup const& iSetup) const override {
-    const auto& info = iSetup.getData(lhcinfoToken_);
+    edm::ESHandle<LHCInfo> lhcInfo;
+    iSetup.get<LHCInfoRcd>().get(lhcInfo);
+    const LHCInfo* info = lhcInfo.product();
     auto out = std::make_unique<nanoaod::MergeableCounterTable>();
-    out->addFloat("crossingAngle", "LHC crossing angle", info.crossingAngle());
-    out->addFloat("betaStar", "LHC beta star", info.betaStar());
-    out->addFloat("energy", "LHC beam energy", info.energy());
+    out->addFloat("crossingAngle", "LHC crossing angle", info->crossingAngle());
+    out->addFloat("betaStar", "LHC beta star", info->betaStar());
+    out->addFloat("energy", "LHC beam energy", info->energy());
     iLumi.put(std::move(out));
   }
 
   // ------------ method fills 'descriptions' with the allowed parameters for the module  ------------
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
     edm::ParameterSetDescription desc;
-    descriptions.addWithDefaultLabel(desc);
+    desc.setUnknown();
+    descriptions.addDefault(desc);
   }
-  edm::ESGetToken<LHCInfo, LHCInfoRcd> lhcinfoToken_;
 };
 
 DEFINE_FWK_MODULE(LHCInfoProducer);
