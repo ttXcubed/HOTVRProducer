@@ -4,7 +4,7 @@ From MINI to NANO - HOTVR production
 ## CMSSW Versions
 Suggested CMSSW version:
 * Run 2: `CMSSW_10_6_28`
-* Run 3: `CMSSW_12_6_0_patch1` (*N.B.:* HOTVR production for Run 3 is still under development!)
+* Run 3: `CMSSW_13_0_3` (*N.B.:* HOTVR production for Run 3 is still under development!)
 
 ## Running CRAB 
 The crab submission files are in `crab_mini_to_nano`. The submission files fetch the input files given in `crab_mini_to_nano/input_files.yaml`.
