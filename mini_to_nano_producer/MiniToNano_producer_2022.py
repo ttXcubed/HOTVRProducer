@@ -2,7 +2,7 @@
 # using: 
 # Revision: 1.19 
 # Source: /local/reps/CMSSW/CMSSW/Configuration/Applications/python/ConfigBuilder.py,v 
-# with command line options: NANO -s NANO --mc --era Run3,run3_nanoAOD_124 --conditions 130X_mcRun3_2022_realistic_v5 --eventcontent NANOAODSIM --datatier NANOAODSIM --customise_commands=process.add_(cms.Service('InitRootHandlers', EnableIMT= cms.untracked.bool(False)));process.MessageLogger.cerr.FwkReport.reportEvery=1000 --no_exec -n 10
+# with command line options: NANO -s NANO --mc --era Run3,run3_nanoAOD_124 --conditions 130X_mcRun3_2022_realistic_v5 --eventcontent NANOAODSIM --datatier NANOAODSIM --customise_commands="process.add_(cms.Service('InitRootHandlers', EnableIMT= cms.untracked.bool(False)));process.MessageLogger.cerr.FwkReport.reportEvery=1000" --no_exec -n 10
 import FWCore.ParameterSet.Config as cms
 
 from Configuration.Eras.Era_Run3_cff import Run3
@@ -23,7 +23,7 @@ process.load('Configuration.StandardSequences.EndOfProcess_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(10),
+    input = cms.untracked.int32(1),
     output = cms.optional.untracked.allowed(cms.int32,cms.PSet)
 )
 
