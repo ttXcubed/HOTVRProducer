@@ -4,6 +4,10 @@ from PhysicsTools.NanoAOD.common_cff import *
 from PhysicsTools.NanoAOD.simpleCandidateFlatTableProducer_cfi import simpleCandidateFlatTableProducer
 from PhysicsTools.NanoAOD.jetsAK8_cff import fatJetTable as _fatJetTable
 from PhysicsTools.NanoAOD.jetsAK8_cff import subJetTable as _subJetTable
+from PhysicsTools.NanoAOD.jetsHOTVR_cff import hotvrJetTable as _hotvrJetTable
+from PhysicsTools.NanoAOD.jetsHOTVR_cff import hotvrSubJetTable as _hotvrSubJetTable
+
+from RecoJets.JetProducers.hotvrGenJets_cfi import *
 
 jetMCTable = simpleCandidateFlatTableProducer.clone(
     src = cms.InputTag("linkedObjects","jets"),
@@ -117,6 +121,52 @@ subjetMCTable = simpleCandidateFlatTableProducer.clone(
 )
 
 
+
+hotvrJetMCTable = simpleCandidateFlatTableProducer.clone(
+    src = _hotvrJetTable.src,
+    cut = _hotvrJetTable.cut,
+    name = _hotvrJetTable.name,
+    extension = cms.bool(True),
+    variables = cms.PSet(
+        nBHadrons = Var("jetFlavourInfo().getbHadrons().size()", "uint8", doc="number of b-hadrons"),
+        nCHadrons = Var("jetFlavourInfo().getcHadrons().size()", "uint8", doc="number of c-hadrons"),
+        hadronFlavour = Var("hadronFlavour()", "uint8", doc="flavour from hadron ghost clustering"),
+        # cut should follow genJetAK8Table.cut
+        genHOTVRJetIdx = Var("?genJetFwdRef().backRef().isNonnull() && genJetFwdRef().backRef().pt() > 100.?genJetFwdRef().backRef().key():-1", "int16", doc="index of matched gen AK8 jet"),
+    )
+)
+
+subjetHOTVRMCTable = simpleCandidateFlatTableProducer.clone(
+    src = _hotvrSubJetTable.src,
+    cut = _hotvrSubJetTable.cut,
+    name = _hotvrSubJetTable.name,
+    extension = cms.bool(True),
+    variables = cms.PSet(
+        nBHadrons = Var("jetFlavourInfo().getbHadrons().size()", "uint8", doc="number of b-hadrons"),
+        nCHadrons = Var("jetFlavourInfo().getcHadrons().size()", "uint8", doc="number of c-hadrons"),
+        hadronFlavour = Var("hadronFlavour()", "uint8", doc="flavour from hadron ghost clustering"),
+    )
+)
+
+
+genHOTVRJetTable = simpleCandidateFlatTableProducer.clone(
+    src = cms.InputTag("hotvrGenJets"),
+    cut = cms.string("pt > 30"),
+    name = cms.string("GenHOTVRJet"),
+    variables = cms.PSet(P4Vars,
+	#anything else?
+    )
+)
+
+genSubJetHOTVRTable = simpleCandidateFlatTableProducer.clone(
+    src = cms.InputTag("hotvrGenJets","SubJets"),
+    name = cms.string("GenHOTVRSubJet"),
+    variables = cms.PSet(P4Vars,
+	#anything else?
+    )
+)
+
 jetMCTaskak4 = cms.Task(jetMCTable,genJetTable,patJetPartonsNano,genJetFlavourTable)
 jetMCTaskak8 = cms.Task(genJetAK8Table,genJetAK8FlavourAssociation,genJetAK8FlavourTable,fatJetMCTable,genSubJetAK8Table,subjetMCTable)
-jetMCTask = jetMCTaskak4.copyAndAdd(jetMCTaskak8)
+jetMCTaskhotvr = cms.Task(packedGenParticlesForJetsNoNu,hotvrGenJets,genHOTVRJetTable,hotvrJetMCTable,genSubJetHOTVRTable,subjetHOTVRMCTable)
+jetMCTask = jetMCTaskak4.copyAndAdd(jetMCTaskak8, jetMCTaskhotvr)
