@@ -15,8 +15,9 @@ args = parser.parse_args()
 
 if args.isData:
     goldenJSON_file = ''
-    goldenJSON_dir = 'goldenJSON_files/'+args.year
-    if args.year == '2016preVFP': goldenJSON_dir = 'goldenJSON_files/2016'
+    goldenJSON_dir = '{}/crab_mini_to_nano/goldenJSON_files/{}'.format(os.getcwd(), args.year)
+    if args.year == '2016preVFP': 
+        goldenJSON_dir = '{}/crab_mini_to_nano/goldenJSON_files/2016'.format(os.getcwd())
     for goldenJSON_path in os.listdir(goldenJSON_dir):
         if os.path.isfile(os.path.join(goldenJSON_dir, goldenJSON_path)):
             # add filename to list
@@ -67,8 +68,8 @@ else:
     configTmpl.JobType.psetName = '{}/mini_to_nano_producer/MiniToNano_producer_{}.py'.format(os.getcwd(), args.year)
 configTmpl.JobType.outputFiles = []
 configTmpl.JobType.allowUndistributedCMSSW = True
-configTmpl.JobType.maxJobRuntimeMin= 25*60
-configTmpl.JobType.maxMemoryMB = 2500
+configTmpl.JobType.maxJobRuntimeMin= 27*60
+configTmpl.JobType.maxMemoryMB = 3000
 # ----
 
 # ----
@@ -76,20 +77,20 @@ configTmpl.section_('Data')
 if args.isData:
     configTmpl.Data.inputDBS = 'global'
     configTmpl.Data.splitting = 'LumiBased'
-    configTmpl.Data.unitsPerJob = 150
+    configTmpl.Data.unitsPerJob = 10
 else:
     configTmpl.Data.inputDBS = 'global'
     configTmpl.Data.splitting = 'FileBased'
-    configTmpl.Data.unitsPerJob = 20
+    configTmpl.Data.unitsPerJob = 4
 
-configTmpl.Data.totalUnits = 1  # ACTIVE WHEN TESTING 
+# configTmpl.Data.totalUnits = 1  # ACTIVE WHEN TESTING 
 configTmpl.Data.publication = True
 # ----
 
 # ----
 configTmpl.section_('Site')
 configTmpl.Site.storageSite = 'T2_DE_DESY'
-# configTmpl.Site.blacklist = ['T2_IT_Pisa','T2_US_Vanderbilt','T2_BR_SPRACE','T2_UK_SGrid_RALPP','T2_ES_IFCA']
+# configTmpl.Site.blacklist = ['T2_US_Purdue'] #'T2_IT_Pisa','T2_US_Vanderbilt','T2_BR_SPRACE','T2_UK_SGrid_RALPP','T2_ES_IFCA']
 # ----
 
 if __name__ == '__main__':
@@ -143,12 +144,12 @@ if __name__ == '__main__':
         print("Submitting job ",i," of ",len(myInputFiles.keys()),":",config.General.workArea)
         
         
-        # p = Process(target=submit, args=(config,))
-        # p.start()
-        # p.join()
+        p = Process(target=submit, args=(config,))
+        p.start()
+        p.join()
             
-        # #break
+        #break
 
-        # print
-        # print
+        print
+        print
         

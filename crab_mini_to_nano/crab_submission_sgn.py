@@ -11,8 +11,8 @@ parser.add_argument('--recoveryTask', action='store_true', help='True when recov
 parser.add_argument('--year', dest='year', type=str, help='Year')
 args = parser.parse_args()
 
-MASS_VALUES = [500, 750]#, 1000, 1250, 1500, 1750, 2000, 2500, 3000, 4000]
-WIDTH_VALUES = [4]#, 10, 20, 50]
+MASS_VALUES = [1500] #, 750, 1000, 1250, 1500, 1750, 2000, 2500, 3000, 4000]
+WIDTH_VALUES = [4] #, 10, 20, 50]
 
 # requestName = "nanoaodUL"+args.year+"v1_230202"
 # requestName = "testNANO18_2"
@@ -34,6 +34,7 @@ print(PROCESS, PROCESS_TAG)
 data_tags, datasets = [], []
 for mass in MASS_VALUES:
     for width in WIDTH_VALUES:
+        # if (mass == 1500 and width == 20) or (mass == 4000 and width == 4): continue
         process_tag = PROCESS_TAG.replace("MASS", str(mass)).replace("WIDTH", str(width))
         process = PROCESS.replace("MASS", str(mass)).replace("WIDTH", str(width))
         data_tags.append(process_tag)
@@ -72,8 +73,10 @@ configTmpl.section_('Data')
 # configTmpl.Data.splitting = 'FileBased'
 # configTmpl.Data.unitsPerJob = 1
 configTmpl.Data.inputDBS = 'global'
-configTmpl.Data.splitting = 'Automatic'
-configTmpl.Data.unitsPerJob = 180
+configTmpl.Data.splitting = 'FileBased'
+configTmpl.Data.unitsPerJob = 4
+# configTmpl.Data.splitting = 'Automatic'
+# configTmpl.Data.unitsPerJob = 180
 
 # configTmpl.Data.totalUnits = 1  # ACTIVE WHEN TESTING 
 configTmpl.Data.publication = True
@@ -113,7 +116,7 @@ if __name__ == '__main__':
         config.General.workArea = "crab/"+requestName+"/"+jobName
         config.Data.outLFNDirBase = "/store/user/"+userName+"/sgn_"+args.year+"/"+requestName
         # config.Data.outputPrimaryDataset = jobName
-        config.Data.outputDatasetTag = requestName
+        # config.Data.outputDatasetTag = requestName
 
         print('outLFNDirBase {}'.format(config.Data.outLFNDirBase))
         for mod in myJob:
