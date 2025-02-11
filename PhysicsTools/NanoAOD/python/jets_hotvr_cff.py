@@ -42,6 +42,9 @@ hotvrJetTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
         subJetIdx1 = Var("?nSubjetCollections()>0 && subjets().size()>0?subjets()[0].key():-1", int, doc="index of first subjet"),
         subJetIdx2 = Var("?nSubjetCollections()>0 && subjets().size()>1?subjets()[1].key():-1", int, doc="index of second subjet"),
         subJetIdx3 = Var("?nSubjetCollections()>0 && subjets().size()>2?subjets()[2].key():-1", int, doc="index of third subjet"),
+        subJetIdx4 = Var("?nSubjetCollections()>0 && subjets().size()>3?subjets()[3].key():-1", int, doc="index of fourth subjet"),
+        subJetIdx5 = Var("?nSubjetCollections()>0 && subjets().size()>4?subjets()[4].key():-1", int, doc="index of fifth subjet"),
+        subJetIdx6 = Var("?nSubjetCollections()>0 && subjets().size()>5?subjets()[5].key():-1", int, doc="index of sixth subjet"),
     ),
 )
 
