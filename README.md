@@ -12,7 +12,7 @@ To run the MiniToNano HOTVR producer, the correct environment setup is needed. T
 ```
 cd CMSSW_*_*_*/src
 cmsenv
-git clone git@github.com:ttXcubed/HOTVRProducer.git
+git clone git@github.com:ttXcubed/HOTVRProducer.git .
 scram b -j 4
 ```
 An example is given to test the producer for 20 events of 2018 ttbar (dilepton) MC sample:
