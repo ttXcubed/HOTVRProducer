@@ -74,7 +74,7 @@ hotvrJetMCTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
     # doc  = cms.string(" "),  #slimmedJetsAK8, i.e. ak8 fat jets for boosted analysis
     singleton = cms.bool(False), # the number of entries is variable
     extension = cms.bool(True), 
-    variables = cms.PSet(P4Vars,
+    variables = cms.PSet(
         partonFlavour = Var("partonFlavour()", int, doc="flavour from parton matching"),
         hadronFlavour = Var("hadronFlavour()", int, doc="flavour from hadron ghost clustering"),
         genHOTVRJetIdx = Var("?genJetFwdRef().backRef().isNonnull()?genJetFwdRef().backRef().key():-1", int, doc="index of matched gen jet"),
